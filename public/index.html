@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feed</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    :root {
+      --text-primary: #242424;
+      --text-secondary: #6b6b6b;
+      --text-muted: #9a9a9a;
+      --border: #e6e6e6;
+      --bg: #ffffff;
+      --bg-hover: #f9f9f9;
+      --accent: #1a8917;
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      line-height: 1.6;
+    }
+    
+    /* Layout */
+    .app {
+      display: flex;
+      min-height: 100vh;
+    }
+    
+    /* Sidebar */
+    .sidebar {
+      width: 240px;
+      border-right: 1px solid var(--border);
+      padding: 24px;
+      position: fixed;
+      height: 100vh;
+      overflow-y: auto;
+    }
+    
+    .logo {
+      font-family: 'Source Serif 4', Georgia, serif;
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 32px;
+      letter-spacing: -0.5px;
+    }
+    
+    .nav-section {
+      margin-bottom: 32px;
+    }
+    
+    .nav-section h3 {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      letter-spacing: 0.5px;
+    }
+    
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s;
+      color: var(--text-secondary);
+      text-decoration: none;
+    }
+    
+    .nav-item:hover {
+      background: var(--bg-hover);
+    }
+    
+    .nav-item.active {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+    
+    .channel-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    
+    .settings-link {
+      position: absolute;
+      bottom: 24px;
+      left: 24px;
+      right: 24px;
+    }
+    
+    /* Main content */
+    .main {
+      flex: 1;
+      margin-left: 240px;
+      max-width: 728px;
+      padding: 40px 24px;
+    }
+    
+    /* Feed view */
+    .feed-header {
+      margin-bottom: 40px;
+    }
+    
+    .feed-header h1 {
+      font-family: 'Source Serif 4', Georgia, serif;
+      font-size: 42px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      letter-spacing: -1px;
+    }
+    
+    .feed-header p {
+      color: var(--text-secondary);
+      font-size: 18px;
+    }
+    
+    /* Report card */
+    .report-card {
+      display: block;
+      padding: 24px 0;
+      border-bottom: 1px solid var(--border);
+      text-decoration: none;
+      color: inherit;
+      cursor: pointer;
+    }
+    
+    .report-card:hover .report-title {
+      color: var(--text-secondary);
+    }
+    
+    .report-card-inner {
+      display: flex;
+      gap: 24px;
+    }
+    
+    .report-content {
+      flex: 1;
+    }
+    
+    .report-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+    
+    .report-channel {
+      font-weight: 500;
+    }
+    
+    .report-date {
+      color: var(--text-muted);
+    }
+    
+    .report-title {
+      font-family: 'Source Serif 4', Georgia, serif;
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      line-height: 1.3;
+      letter-spacing: -0.3px;
+      transition: color 0.15s;
+    }
+    
+    .report-subtitle {
+      color: var(--text-secondary);
+      font-size: 15px;
+      line-height: 1.5;
+      margin-bottom: 12px;
+    }
+    
+    .report-footer {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    
+    .report-image {
+      width: 160px;
+      height: 107px;
+      object-fit: cover;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+    
+    /* Report detail view */
+    .report-detail {
+      max-width: 680px;
+    }
+    
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 14px;
+      margin-bottom: 32px;
+    }
+    
+    .back-link:hover {
+      color: var(--text-primary);
+    }
+    
+    .report-detail .report-meta {
+      margin-bottom: 16px;
+    }
+    
+    .report-detail .report-title {
+      font-size: 40px;
+      margin-bottom: 16px;
+      letter-spacing: -1px;
+    }
+    
+    .report-detail .report-subtitle {
+      font-size: 22px;
+      color: var(--text-secondary);
+      margin-bottom: 32px;
+      font-family: 'Source Serif 4', Georgia, serif;
+    }
+    
+    .report-detail .report-image {
+      width: 100%;
+      height: auto;
+      max-height: 400px;
+      margin-bottom: 32px;
+    }
+    
+    .report-body {
+      font-family: 'Source Serif 4', Georgia, serif;
+      font-size: 20px;
+      line-height: 1.8;
+      color: var(--text-primary);
+    }
+    
+    .report-body h1, .report-body h2, .report-body h3 {
+      font-family: 'Source Serif 4', Georgia, serif;
+      margin-top: 40px;
+      margin-bottom: 16px;
+    }
+    
+    .report-body h2 {
+      font-size: 28px;
+    }
+    
+    .report-body h3 {
+      font-size: 22px;
+    }
+    
+    .report-body p {
+      margin-bottom: 24px;
+    }
+    
+    .report-body ul, .report-body ol {
+      margin-bottom: 24px;
+      padding-left: 24px;
+    }
+    
+    .report-body li {
+      margin-bottom: 8px;
+    }
+    
+    .report-body a {
+      color: inherit;
+      text-decoration: underline;
+    }
+    
+    .report-body blockquote {
+      border-left: 3px solid var(--text-primary);
+      padding-left: 20px;
+      margin: 32px 0;
+      font-style: italic;
+    }
+    
+    .report-body code {
+      background: var(--bg-hover);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+    
+    .report-body pre {
+      background: #1a1a1a;
+      color: #f0f0f0;
+      padding: 20px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin-bottom: 24px;
+    }
+    
+    .report-body pre code {
+      background: none;
+      padding: 0;
+      font-size: 14px;
+    }
+    
+    .sources {
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+    }
+    
+    .sources h3 {
+      font-size: 14px;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+      letter-spacing: 0.5px;
+      font-family: 'Inter', sans-serif;
+    }
+    
+    .source-item {
+      display: block;
+      color: var(--text-secondary);
+      text-decoration: none;
+      padding: 8px 0;
+      font-size: 15px;
+      font-family: 'Inter', sans-serif;
+    }
+    
+    .source-item:hover {
+      color: var(--text-primary);
+    }
+    
+    /* Settings view */
+    .settings-section {
+      margin-bottom: 48px;
+    }
+    
+    .settings-section h2 {
+      font-family: 'Source Serif 4', Georgia, serif;
+      font-size: 24px;
+      margin-bottom: 24px;
+    }
+    
+    .settings-form {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    
+    .settings-form input, .settings-form select {
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+    
+    .settings-form input {
+      flex: 1;
+    }
+    
+    .settings-form button {
+      padding: 10px 20px;
+      background: var(--text-primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    
+    .settings-form button:hover {
+      background: #3a3a3a;
+    }
+    
+    .settings-list {
+      list-style: none;
+    }
+    
+    .settings-list-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .settings-list-item .info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .delete-btn {
+      color: var(--text-muted);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 18px;
+    }
+    
+    .delete-btn:hover {
+      color: #dc2626;
+    }
+    
+    .badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      background: var(--bg-hover);
+      color: var(--text-secondary);
+    }
+    
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 80px 20px;
+      color: var(--text-secondary);
+    }
+    
+    .empty-state h2 {
+      font-family: 'Source Serif 4', Georgia, serif;
+      font-size: 24px;
+      margin-bottom: 8px;
+      color: var(--text-primary);
+    }
+    
+    /* Responsive */
+    @media (max-width: 900px) {
+      .sidebar {
+        display: none;
+      }
+      .main {
+        margin-left: 0;
+        max-width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="logo">Feed</div>
+      
+      <nav class="nav-section">
+        <a class="nav-item active" data-view="feed" data-channel="">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+          </svg>
+          Home
+        </a>
+      </nav>
+      
+      <nav class="nav-section" id="channels-nav">
+        <h3>Channels</h3>
+        <!-- Populated by JS -->
+      </nav>
+      
+      <a class="nav-item settings-link" data-view="settings">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        Settings
+      </a>
+    </aside>
+    
+    <main class="main" id="main-content">
+      <!-- Populated by JS -->
+    </main>
+  </div>
+  
+  <script>
+    // State
+    let channels = [];
+    let currentView = 'feed';
+    let currentChannel = '';
+    let currentReportId = null;
+    
+    // API helpers
+    async function api(endpoint, options = {}) {
+      const res = await fetch(`/api${endpoint}`, {
+        ...options,
+        headers: { 'Content-Type': 'application/json', ...options.headers }
+      });
+      return res.json();
+    }
+    
+    // Format date
+    function formatDate(dateStr) {
+      const date = new Date(dateStr);
+      const now = new Date();
+      const diff = now - date;
+      
+      if (diff < 86400000) {
+        const hours = Math.floor(diff / 3600000);
+        if (hours < 1) return 'Just now';
+        return `${hours}h ago`;
+      }
+      
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+    
+    // Render channels in sidebar
+    async function loadChannels() {
+      channels = await api('/channels');
+      const nav = document.getElementById('channels-nav');
+      
+      if (channels.length === 0) {
+        nav.innerHTML = '<h3>Channels</h3><p style="color: var(--text-muted); font-size: 13px; padding: 0 12px;">No channels yet</p>';
+        return;
+      }
+      
+      nav.innerHTML = '<h3>Channels</h3>' + channels.map(c => `
+        <a class="nav-item ${currentChannel === c.slug ? 'active' : ''}" data-view="feed" data-channel="${c.slug}">
+          <span class="channel-dot" style="background: ${c.color}"></span>
+          ${c.name}
+        </a>
+      `).join('');
+    }
+    
+    // Render feed view
+    async function renderFeed() {
+      const main = document.getElementById('main-content');
+      const reports = await api(`/feed${currentChannel ? `?channel=${currentChannel}` : ''}`);
+      
+      const channel = channels.find(c => c.slug === currentChannel);
+      const title = channel ? channel.name : 'Your Feed';
+      const desc = channel ? channel.description : 'AI-curated reports, just for you';
+      
+      if (reports.length === 0) {
+        main.innerHTML = `
+          <div class="feed-header">
+            <h1>${title}</h1>
+            <p>${desc || ''}</p>
+          </div>
+          <div class="empty-state">
+            <h2>No reports yet</h2>
+            <p>Reports will appear here when generated</p>
+          </div>
+        `;
+        return;
+      }
+      
+      main.innerHTML = `
+        <div class="feed-header">
+          <h1>${title}</h1>
+          <p>${desc || ''}</p>
+        </div>
+        <div class="feed-list">
+          ${reports.map(r => `
+            <a class="report-card" data-report-id="${r.id}">
+              <div class="report-card-inner">
+                <div class="report-content">
+                  <div class="report-meta">
+                    <span class="report-channel" style="color: ${r.channel_color}">${r.channel_name}</span>
+                    <span class="report-date">· ${formatDate(r.created_at)}</span>
+                  </div>
+                  <h2 class="report-title">${r.title}</h2>
+                  ${r.subtitle ? `<p class="report-subtitle">${r.subtitle}</p>` : ''}
+                  <div class="report-footer">
+                    <span>${r.read_time_min} min read</span>
+                  </div>
+                </div>
+                ${r.image_url ? `<img class="report-image" src="${r.image_url}" alt="">` : ''}
+              </div>
+            </a>
+          `).join('')}
+        </div>
+      `;
+    }
+    
+    // Render single report
+    async function renderReport(id) {
+      const main = document.getElementById('main-content');
+      const report = await api(`/reports/${id}`);
+      
+      const sources = report.sources || [];
+      
+      main.innerHTML = `
+        <article class="report-detail">
+          <a class="back-link" data-view="feed" data-channel="${report.channel_slug || ''}">
+            ← Back to ${report.channel_name || 'Feed'}
+          </a>
+          <div class="report-meta">
+            <span class="report-channel" style="color: ${report.channel_color}">${report.channel_name}</span>
+            <span class="report-date">· ${formatDate(report.created_at)}</span>
+            <span>· ${report.read_time_min} min read</span>
+          </div>
+          <h1 class="report-title">${report.title}</h1>
+          ${report.subtitle ? `<p class="report-subtitle">${report.subtitle}</p>` : ''}
+          ${report.image_url ? `<img class="report-image" src="${report.image_url}" alt="">` : ''}
+          <div class="report-body">${report.content_html}</div>
+          ${sources.length > 0 ? `
+            <div class="sources">
+              <h3>Sources</h3>
+              ${sources.map(s => `
+                <a class="source-item" href="${s.url}" target="_blank">${s.title || s.url}</a>
+              `).join('')}
+            </div>
+          ` : ''}
+        </article>
+      `;
+    }
+    
+    // Render settings
+    async function renderSettings() {
+      const main = document.getElementById('main-content');
+      const [topics, filters] = await Promise.all([
+        api('/topics'),
+        api('/filters')
+      ]);
+      
+      main.innerHTML = `
+        <div class="feed-header">
+          <h1>Settings</h1>
+          <p>Manage your channels, topics, and filters</p>
+        </div>
+        
+        <section class="settings-section">
+          <h2>Channels</h2>
+          <form class="settings-form" id="channel-form">
+            <input type="text" name="name" placeholder="Channel name" required>
+            <input type="text" name="slug" placeholder="slug" required>
+            <input type="color" name="color" value="#6366f1" style="width: 50px; padding: 5px;">
+            <button type="submit">Add</button>
+          </form>
+          <ul class="settings-list">
+            ${channels.map(c => `
+              <li class="settings-list-item">
+                <div class="info">
+                  <span class="channel-dot" style="background: ${c.color}"></span>
+                  <span>${c.name}</span>
+                </div>
+                <button class="delete-btn" data-delete="channel" data-id="${c.id}">×</button>
+              </li>
+            `).join('')}
+          </ul>
+        </section>
+        
+        <section class="settings-section">
+          <h2>Topics</h2>
+          <form class="settings-form" id="topic-form">
+            <input type="text" name="query" placeholder="Search query" required>
+            <select name="channel_id" required>
+              <option value="">Select channel</option>
+              ${channels.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
+            </select>
+            <select name="frequency">
+              <option value="hourly">Hourly</option>
+              <option value="daily" selected>Daily</option>
+              <option value="weekly">Weekly</option>
+            </select>
+            <button type="submit">Add</button>
+          </form>
+          <ul class="settings-list">
+            ${topics.map(t => `
+              <li class="settings-list-item">
+                <div class="info">
+                  <span>${t.query}</span>
+                  <span class="badge">${t.channel_name || 'No channel'}</span>
+                  <span class="badge">${t.frequency}</span>
+                </div>
+                <button class="delete-btn" data-delete="topic" data-id="${t.id}">×</button>
+              </li>
+            `).join('')}
+          </ul>
+        </section>
+        
+        <section class="settings-section">
+          <h2>Filters</h2>
+          <form class="settings-form" id="filter-form">
+            <input type="text" name="term" placeholder="Term to block" required>
+            <select name="channel_id">
+              <option value="">All channels</option>
+              ${channels.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
+            </select>
+            <button type="submit">Block</button>
+          </form>
+          <ul class="settings-list">
+            ${filters.map(f => `
+              <li class="settings-list-item">
+                <div class="info">
+                  <span>${f.term}</span>
+                  <span class="badge">${f.channel_name || 'Global'}</span>
+                </div>
+                <button class="delete-btn" data-delete="filter" data-id="${f.id}">×</button>
+              </li>
+            `).join('')}
+          </ul>
+        </section>
+      `;
+      
+      // Form handlers
+      document.getElementById('channel-form').onsubmit = async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        await api('/channels', {
+          method: 'POST',
+          body: JSON.stringify({
+            name: form.name.value,
+            slug: form.slug.value,
+            color: form.color.value
+          })
+        });
+        form.reset();
+        await loadChannels();
+        renderSettings();
+      };
+      
+      document.getElementById('topic-form').onsubmit = async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        await api('/topics', {
+          method: 'POST',
+          body: JSON.stringify({
+            query: form.query.value,
+            channel_id: parseInt(form.channel_id.value),
+            frequency: form.frequency.value
+          })
+        });
+        form.reset();
+        renderSettings();
+      };
+      
+      document.getElementById('filter-form').onsubmit = async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        await api('/filters', {
+          method: 'POST',
+          body: JSON.stringify({
+            term: form.term.value,
+            channel_id: form.channel_id.value ? parseInt(form.channel_id.value) : null
+          })
+        });
+        form.reset();
+        renderSettings();
+      };
+    }
+    
+    // Route to view
+    async function navigate(view, channel = '', reportId = null) {
+      currentView = view;
+      currentChannel = channel;
+      currentReportId = reportId;
+      
+      // Update active nav
+      document.querySelectorAll('.nav-item').forEach(el => {
+        el.classList.remove('active');
+        if (el.dataset.view === view) {
+          if (view === 'feed' && el.dataset.channel === channel) {
+            el.classList.add('active');
+          } else if (view === 'settings' && el.dataset.view === 'settings') {
+            el.classList.add('active');
+          }
+        }
+      });
+      
+      if (reportId) {
+        await renderReport(reportId);
+      } else if (view === 'settings') {
+        await renderSettings();
+      } else {
+        await renderFeed();
+      }
+    }
+    
+    // Event delegation
+    document.addEventListener('click', (e) => {
+      const navItem = e.target.closest('.nav-item');
+      if (navItem) {
+        e.preventDefault();
+        navigate(navItem.dataset.view, navItem.dataset.channel || '');
+        return;
+      }
+      
+      const reportCard = e.target.closest('.report-card');
+      if (reportCard) {
+        e.preventDefault();
+        navigate('report', currentChannel, reportCard.dataset.reportId);
+        return;
+      }
+      
+      const backLink = e.target.closest('.back-link');
+      if (backLink) {
+        e.preventDefault();
+        navigate('feed', backLink.dataset.channel || '');
+        return;
+      }
+      
+      const deleteBtn = e.target.closest('.delete-btn');
+      if (deleteBtn) {
+        const type = deleteBtn.dataset.delete;
+        const id = deleteBtn.dataset.id;
+        api(`/${type}s/${id}`, { method: 'DELETE' }).then(() => {
+          if (type === 'channel') loadChannels().then(() => renderSettings());
+          else renderSettings();
+        });
+        return;
+      }
+    });
+    
+    // Init
+    loadChannels().then(() => navigate('feed'));
+  </script>
+</body>
+</html>
