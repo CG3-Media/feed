@@ -6,7 +6,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '5mb' }));
 
 // Auth token from env (or generate one)
 const FEED_TOKEN = process.env.FEED_TOKEN || '824c578a864bc97df5c1e8b61fb614f8b76c8ac725a32f5c';
