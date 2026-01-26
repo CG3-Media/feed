@@ -6,14 +6,16 @@
   <title>Feed</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,700;0,900;1,700&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     
     :root {
       --black: #0a0a0a;
       --white: #fafafa;
+      --gray: #888;
       --know-color: #2563eb;
       --watch-color: #dc2626;
       --listen-color: #16a34a;
@@ -29,6 +31,8 @@
       overflow-x: hidden;
     }
     
+    a { color: inherit; text-decoration: none; }
+    
     /* Three.js canvas */
     #bg-canvas {
       position: fixed;
@@ -38,6 +42,7 @@
       height: 100%;
       z-index: 0;
       pointer-events: none;
+      opacity: 0.6;
     }
     
     /* Navigation */
@@ -51,14 +56,15 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      mix-blend-mode: difference;
+      background: linear-gradient(to bottom, rgba(10,10,10,0.9) 0%, transparent 100%);
     }
     
     .logo {
       font-family: 'Playfair Display', serif;
-      font-size: 32px;
+      font-size: 28px;
       font-weight: 900;
       letter-spacing: -1px;
+      cursor: pointer;
     }
     
     .nav-links {
@@ -67,17 +73,22 @@
     }
     
     .nav-links a {
-      color: var(--white);
-      text-decoration: none;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 500;
       text-transform: uppercase;
-      letter-spacing: 1px;
-      opacity: 0.7;
+      letter-spacing: 1.5px;
+      opacity: 0.6;
       transition: opacity 0.3s;
     }
     
-    .nav-links a:hover { opacity: 1; }
+    .nav-links a:hover, .nav-links a.active { opacity: 1; }
+    
+    /* Main content */
+    #app {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+    }
     
     /* Hero section */
     .hero {
@@ -86,241 +97,428 @@
       flex-direction: column;
       justify-content: center;
       padding: 120px 48px;
-      position: relative;
-      z-index: 1;
     }
     
     .hero-title {
       font-family: 'Playfair Display', serif;
-      font-size: clamp(64px, 12vw, 180px);
+      font-size: clamp(56px, 11vw, 160px);
       font-weight: 900;
       line-height: 0.9;
       letter-spacing: -4px;
-      margin-bottom: 32px;
+      margin-bottom: 24px;
     }
     
-    .hero-title span {
-      display: block;
-    }
-    
-    .hero-title .highlight {
+    .hero-title .outline {
       -webkit-text-stroke: 2px var(--white);
       color: transparent;
     }
     
     .hero-subtitle {
-      font-size: 20px;
-      opacity: 0.6;
-      max-width: 500px;
+      font-size: 18px;
+      opacity: 0.5;
+      max-width: 450px;
       line-height: 1.6;
     }
     
-    .scroll-indicator {
+    .scroll-hint {
       position: absolute;
       bottom: 48px;
       left: 48px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      opacity: 0.3;
       display: flex;
       align-items: center;
-      gap: 12px;
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      opacity: 0.5;
+      gap: 16px;
     }
     
-    .scroll-indicator::before {
+    .scroll-hint::before {
       content: '';
-      width: 48px;
+      width: 40px;
       height: 1px;
-      background: var(--white);
+      background: currentColor;
     }
     
     /* Section styles */
     .section {
       min-height: 100vh;
-      padding: 120px 48px;
+      padding: 100px 48px;
       position: relative;
-      z-index: 1;
     }
     
     .section-header {
-      margin-bottom: 64px;
+      margin-bottom: 56px;
     }
     
     .section-label {
-      font-size: 12px;
+      font-size: 11px;
       text-transform: uppercase;
-      letter-spacing: 3px;
-      opacity: 0.5;
-      margin-bottom: 16px;
+      letter-spacing: 4px;
+      opacity: 0.4;
+      margin-bottom: 12px;
     }
     
     .section-title {
       font-family: 'Playfair Display', serif;
-      font-size: clamp(48px, 8vw, 120px);
+      font-size: clamp(40px, 7vw, 100px);
       font-weight: 900;
       line-height: 1;
-      letter-spacing: -3px;
+      letter-spacing: -2px;
     }
     
-    /* KNOW section - Blue */
-    .section-know {
-      background: linear-gradient(135deg, var(--know-color) 0%, #1e40af 100%);
-    }
-    
-    /* WATCH section - Red */
-    .section-watch {
-      background: linear-gradient(135deg, var(--watch-color) 0%, #991b1b 100%);
-    }
-    
-    /* LISTEN section - Green */
-    .section-listen {
-      background: linear-gradient(135deg, var(--listen-color) 0%, #166534 100%);
-    }
+    .section-know { background: linear-gradient(160deg, #1e3a8a 0%, #1e40af 50%, #2563eb 100%); }
+    .section-watch { background: linear-gradient(160deg, #7f1d1d 0%, #991b1b 50%, #dc2626 100%); }
+    .section-listen { background: linear-gradient(160deg, #14532d 0%, #166534 50%, #16a34a 100%); }
     
     /* Card grid */
     .card-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-      gap: 32px;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
     }
     
-    /* 3D Card */
-    .card-3d {
-      background: rgba(255,255,255,0.1);
-      backdrop-filter: blur(20px);
-      border-radius: 24px;
-      padding: 32px;
+    /* Cards */
+    .card {
+      background: rgba(255,255,255,0.08);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px;
+      overflow: hidden;
       cursor: pointer;
-      transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.5s;
-      transform-style: preserve-3d;
-      perspective: 1000px;
+      transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
     }
     
-    .card-3d:hover {
-      transform: translateY(-12px) rotateX(5deg);
-      box-shadow: 0 40px 80px rgba(0,0,0,0.4);
+    .card:hover {
+      transform: translateY(-8px) scale(1.02);
+      background: rgba(255,255,255,0.12);
+      box-shadow: 0 32px 64px rgba(0,0,0,0.3);
     }
     
-    .card-3d.featured {
+    .card.featured {
       grid-column: span 2;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 32px;
-      align-items: center;
     }
     
     .card-image {
       width: 100%;
-      height: 200px;
+      height: 180px;
       object-fit: cover;
-      border-radius: 16px;
-      margin-bottom: 24px;
     }
     
-    .card-3d.featured .card-image {
-      height: 300px;
-      margin-bottom: 0;
+    .card.featured .card-image {
+      height: 280px;
+    }
+    
+    .card-body {
+      padding: 24px;
     }
     
     .card-channel {
-      font-size: 11px;
+      font-size: 10px;
       text-transform: uppercase;
       letter-spacing: 2px;
-      opacity: 0.7;
+      opacity: 0.5;
       margin-bottom: 12px;
     }
     
     .card-title {
       font-family: 'Playfair Display', serif;
-      font-size: 28px;
+      font-size: 22px;
       font-weight: 700;
-      line-height: 1.2;
-      margin-bottom: 16px;
+      line-height: 1.25;
+      margin-bottom: 12px;
     }
     
-    .card-3d.featured .card-title {
-      font-size: 42px;
+    .card.featured .card-title {
+      font-size: 32px;
     }
     
     .card-subtitle {
-      font-size: 16px;
-      opacity: 0.7;
+      font-size: 14px;
+      opacity: 0.6;
       line-height: 1.5;
+      margin-bottom: 16px;
     }
     
     .card-meta {
-      margin-top: 24px;
+      font-size: 12px;
+      opacity: 0.4;
+    }
+    
+    /* Report detail view */
+    .report-view {
+      padding: 140px 48px 80px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    .report-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
       font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
       opacity: 0.5;
+      margin-bottom: 48px;
+      cursor: pointer;
+      transition: opacity 0.3s;
     }
     
-    /* Parallax images */
-    .parallax-image {
-      position: absolute;
+    .report-back:hover { opacity: 1; }
+    
+    .report-back svg {
+      width: 16px;
+      height: 16px;
+    }
+    
+    .report-channel {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      margin-bottom: 16px;
+    }
+    
+    .report-channel.know { color: var(--know-color); }
+    .report-channel.watch { color: var(--watch-color); }
+    .report-channel.listen { color: var(--listen-color); }
+    
+    .report-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(36px, 6vw, 64px);
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -2px;
+      margin-bottom: 24px;
+    }
+    
+    .report-subtitle {
+      font-size: 22px;
+      opacity: 0.6;
+      line-height: 1.5;
+      margin-bottom: 32px;
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+    }
+    
+    .report-meta {
+      font-size: 13px;
+      opacity: 0.4;
+      margin-bottom: 48px;
+      padding-bottom: 48px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .report-image {
+      width: 100%;
       border-radius: 16px;
-      overflow: hidden;
-      box-shadow: 0 32px 64px rgba(0,0,0,0.3);
+      margin-bottom: 48px;
     }
     
-    .parallax-image img {
+    .report-body {
+      font-size: 19px;
+      line-height: 1.8;
+    }
+    
+    .report-body p {
+      margin-bottom: 28px;
+    }
+    
+    .report-body h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 32px;
+      margin: 56px 0 24px;
+    }
+    
+    .report-body h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 24px;
+      margin: 40px 0 16px;
+    }
+    
+    .report-body a {
+      color: var(--accent);
+      text-decoration: underline;
+    }
+    
+    .report-body blockquote {
+      border-left: 3px solid var(--accent);
+      padding-left: 24px;
+      margin: 32px 0;
+      font-style: italic;
+      opacity: 0.8;
+    }
+    
+    .report-body ul, .report-body ol {
+      margin-bottom: 28px;
+      padding-left: 24px;
+    }
+    
+    .report-body li {
+      margin-bottom: 8px;
+    }
+    
+    .report-body strong {
+      color: var(--accent);
+    }
+    
+    /* YouTube embeds */
+    .youtube-embed {
+      position: relative;
+      width: 100%;
+      padding-bottom: 56.25%;
+      margin: 32px 0;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    
+    .youtube-embed iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      border: none;
     }
     
-    /* Floating elements */
-    .float {
-      animation: float 6s ease-in-out infinite;
+    /* Sources */
+    .report-sources {
+      margin-top: 64px;
+      padding-top: 32px;
+      border-top: 1px solid rgba(255,255,255,0.1);
     }
     
-    .float-delayed {
-      animation: float 6s ease-in-out infinite;
-      animation-delay: -3s;
+    .report-sources h4 {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      opacity: 0.4;
+      margin-bottom: 16px;
     }
     
-    @keyframes float {
-      0%, 100% { transform: translateY(0) rotate(0deg); }
-      50% { transform: translateY(-20px) rotate(2deg); }
+    .report-sources a {
+      display: block;
+      padding: 8px 0;
+      opacity: 0.6;
+      transition: opacity 0.3s;
     }
     
-    /* Empty state */
-    .empty-section {
-      text-align: center;
-      padding: 80px;
+    .report-sources a:hover {
+      opacity: 1;
+      color: var(--accent);
+    }
+    
+    /* Channel view */
+    .channel-view {
+      padding: 140px 48px 80px;
+    }
+    
+    .channel-header {
+      margin-bottom: 64px;
+    }
+    
+    .channel-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(48px, 8vw, 100px);
+      font-weight: 900;
+      letter-spacing: -3px;
+      margin-bottom: 16px;
+    }
+    
+    .channel-desc {
+      font-size: 18px;
       opacity: 0.5;
+      max-width: 500px;
     }
     
-    /* Responsive */
-    @media (max-width: 768px) {
-      nav { padding: 16px 24px; }
-      .hero, .section { padding: 80px 24px; }
-      .card-3d.featured { grid-column: span 1; grid-template-columns: 1fr; }
-      .card-grid { grid-template-columns: 1fr; }
+    /* Feed list */
+    .feed-list {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      max-width: 900px;
     }
     
-    /* Loading state */
+    .feed-item {
+      display: flex;
+      gap: 32px;
+      padding: 32px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .feed-item:hover {
+      background: rgba(255,255,255,0.08);
+      transform: translateX(8px);
+    }
+    
+    .feed-item-image {
+      width: 200px;
+      height: 140px;
+      object-fit: cover;
+      border-radius: 12px;
+      flex-shrink: 0;
+    }
+    
+    .feed-item-content {
+      flex: 1;
+    }
+    
+    .feed-item-channel {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      opacity: 0.4;
+      margin-bottom: 8px;
+    }
+    
+    .feed-item-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 24px;
+      font-weight: 700;
+      line-height: 1.3;
+      margin-bottom: 8px;
+    }
+    
+    .feed-item-subtitle {
+      font-size: 15px;
+      opacity: 0.5;
+      line-height: 1.5;
+    }
+    
+    .feed-item-meta {
+      margin-top: 16px;
+      font-size: 12px;
+      opacity: 0.3;
+    }
+    
+    /* Loading */
     .loading {
       display: flex;
       align-items: center;
       justify-content: center;
       min-height: 100vh;
-      font-size: 24px;
+      font-size: 18px;
+      opacity: 0.5;
     }
     
-    .loading::after {
-      content: '';
-      width: 24px;
-      height: 24px;
-      border: 2px solid var(--white);
-      border-top-color: transparent;
-      border-radius: 50%;
-      margin-left: 16px;
-      animation: spin 1s linear infinite;
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .card-grid { grid-template-columns: repeat(2, 1fr); }
+      .card.featured { grid-column: span 2; }
     }
     
-    @keyframes spin {
-      to { transform: rotate(360deg); }
+    @media (max-width: 768px) {
+      nav { padding: 16px 24px; }
+      .hero, .section, .report-view, .channel-view { padding-left: 24px; padding-right: 24px; }
+      .card-grid { grid-template-columns: 1fr; }
+      .card.featured { grid-column: span 1; }
+      .feed-item { flex-direction: column; }
+      .feed-item-image { width: 100%; height: 180px; }
+      .nav-links { display: none; }
     }
   </style>
 </head>
@@ -328,16 +526,12 @@
   <canvas id="bg-canvas"></canvas>
   
   <nav>
-    <div class="logo">Feed</div>
-    <div class="nav-links">
-      <a href="#know">Know</a>
-      <a href="#watch">Watch</a>
-      <a href="#listen">Listen</a>
-    </div>
+    <div class="logo" onclick="navigate('home')">Feed</div>
+    <div class="nav-links" id="nav-links"></div>
   </nav>
   
   <main id="app">
-    <div class="loading">Loading your briefing</div>
+    <div class="loading">Loading...</div>
   </main>
 
   <script>
@@ -349,33 +543,33 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     
-    // Create floating geometric shapes
     const shapes = [];
     const geometries = [
-      new THREE.TorusGeometry(1, 0.3, 16, 100),
-      new THREE.OctahedronGeometry(0.8),
-      new THREE.IcosahedronGeometry(0.7),
+      new THREE.TorusGeometry(1, 0.3, 16, 50),
+      new THREE.OctahedronGeometry(0.7),
+      new THREE.IcosahedronGeometry(0.6),
+      new THREE.TorusKnotGeometry(0.5, 0.15, 64, 8),
     ];
     
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < 12; i++) {
       const geometry = geometries[Math.floor(Math.random() * geometries.length)];
       const material = new THREE.MeshBasicMaterial({ 
         color: [0x2563eb, 0xdc2626, 0x16a34a, 0xfbbf24][Math.floor(Math.random() * 4)],
         wireframe: true,
         transparent: true,
-        opacity: 0.3
+        opacity: 0.2
       });
       const mesh = new THREE.Mesh(geometry, material);
       mesh.position.set(
-        (Math.random() - 0.5) * 20,
-        (Math.random() - 0.5) * 20,
-        (Math.random() - 0.5) * 10 - 5
+        (Math.random() - 0.5) * 16,
+        (Math.random() - 0.5) * 16,
+        (Math.random() - 0.5) * 8 - 4
       );
-      mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
       mesh.userData = {
-        rotationSpeed: { x: Math.random() * 0.01, y: Math.random() * 0.01 },
-        floatSpeed: Math.random() * 0.5 + 0.5,
-        floatOffset: Math.random() * Math.PI * 2
+        rotX: Math.random() * 0.005,
+        rotY: Math.random() * 0.005,
+        speed: Math.random() * 0.3 + 0.3,
+        offset: Math.random() * Math.PI * 2
       };
       shapes.push(mesh);
       scene.add(mesh);
@@ -383,64 +577,93 @@
     
     camera.position.z = 5;
     
-    // Mouse tracking for parallax
     let mouseX = 0, mouseY = 0;
-    document.addEventListener('mousemove', (e) => {
+    document.addEventListener('mousemove', e => {
       mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
       mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
     });
     
-    // Animation loop
     function animate() {
       requestAnimationFrame(animate);
-      
-      shapes.forEach(shape => {
-        shape.rotation.x += shape.userData.rotationSpeed.x;
-        shape.rotation.y += shape.userData.rotationSpeed.y;
-        shape.position.y += Math.sin(Date.now() * 0.001 * shape.userData.floatSpeed + shape.userData.floatOffset) * 0.002;
+      shapes.forEach(s => {
+        s.rotation.x += s.userData.rotX;
+        s.rotation.y += s.userData.rotY;
+        s.position.y += Math.sin(Date.now() * 0.001 * s.userData.speed + s.userData.offset) * 0.001;
       });
-      
-      camera.position.x += (mouseX * 0.5 - camera.position.x) * 0.05;
-      camera.position.y += (-mouseY * 0.5 - camera.position.y) * 0.05;
+      camera.position.x += (mouseX * 0.3 - camera.position.x) * 0.03;
+      camera.position.y += (-mouseY * 0.3 - camera.position.y) * 0.03;
       camera.lookAt(scene.position);
-      
       renderer.render(scene, camera);
     }
     animate();
     
-    // Resize handler
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
     
-    // API helper
+    // State
+    let channels = [];
+    let currentView = 'home';
+    
+    // API
     async function api(endpoint) {
       const res = await fetch(`/api${endpoint}`);
       return res.json();
     }
     
-    // Format date
-    function formatDate(dateStr) {
-      const date = new Date(dateStr);
-      const now = new Date();
-      const diff = now - date;
+    // Helpers
+    function formatDate(d) {
+      const date = new Date(d);
+      const diff = Date.now() - date;
       if (diff < 3600000) return 'Just now';
-      if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+      if (diff < 86400000) return `${Math.floor(diff/3600000)}h ago`;
       return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+    
+    function processYouTube(html) {
+      return html.replace(
+        /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})[^\s]*/g,
+        '<div class="youtube-embed"><iframe src="https://www.youtube.com/embed/$1" allowfullscreen></iframe></div>'
+      );
+    }
+    
+    // Navigation
+    function navigate(view, param = null) {
+      currentView = view;
+      
+      let url = '/';
+      if (view === 'report') url = `/reports/${param}`;
+      else if (view === 'channel') url = `/channel/${param}`;
+      
+      history.pushState({ view, param }, '', url);
+      render(view, param);
+    }
+    
+    window.addEventListener('popstate', e => {
+      if (e.state) render(e.state.view, e.state.param);
+      else render('home');
+    });
+    
+    // Parse URL
+    function parseUrl() {
+      const path = window.location.pathname;
+      if (path.startsWith('/reports/')) return { view: 'report', param: path.split('/')[2] };
+      if (path.startsWith('/channel/')) return { view: 'channel', param: path.split('/')[2] };
+      return { view: 'home', param: null };
     }
     
     // Render card
     function renderCard(item, featured = false) {
-      const hasImage = item.image_data || item.image_url;
+      const img = item.image_data || item.image_url;
       return `
-        <article class="card-3d ${featured ? 'featured' : ''}" data-report-id="${item.id}">
-          ${hasImage ? `<img class="card-image" src="${item.image_data || item.image_url}" alt="">` : ''}
-          <div class="card-content">
-            <div class="card-channel">${item.channel_name}</div>
+        <article class="card ${featured ? 'featured' : ''}" onclick="navigate('report', '${item.id}')">
+          ${img ? `<img class="card-image" src="${img}" alt="">` : ''}
+          <div class="card-body">
+            <div class="card-channel">${item.channel_name || ''}</div>
             <h3 class="card-title">${item.title}</h3>
-            ${item.subtitle ? `<p class="card-subtitle">${item.subtitle}</p>` : ''}
+            ${item.subtitle && featured ? `<p class="card-subtitle">${item.subtitle}</p>` : ''}
             <div class="card-meta">${formatDate(item.created_at)}</div>
           </div>
         </article>
@@ -448,11 +671,10 @@
     }
     
     // Render section
-    function renderSection(id, label, title, items, colorClass) {
-      if (!items || items.length === 0) return '';
-      
+    function renderSection(id, label, title, items, cls) {
+      if (!items?.length) return '';
       return `
-        <section id="${id}" class="section ${colorClass}">
+        <section id="${id}" class="section ${cls}">
           <div class="section-header">
             <div class="section-label">${label}</div>
             <h2 class="section-title">${title}</h2>
@@ -464,46 +686,111 @@
       `;
     }
     
-    // Load and render dashboard
-    async function loadDashboard() {
-      const dashboard = await api('/dashboard');
-      const app = document.getElementById('app');
+    // Render home
+    async function renderHome() {
+      const [dashboard, channelList] = await Promise.all([api('/dashboard'), api('/channels')]);
+      channels = channelList;
       
-      app.innerHTML = `
+      document.getElementById('nav-links').innerHTML = channels.slice(0, 5).map(c => 
+        `<a onclick="navigate('channel', '${c.slug}')">${c.name}</a>`
+      ).join('');
+      
+      document.getElementById('app').innerHTML = `
         <section class="hero">
           <h1 class="hero-title">
-            <span>Your</span>
-            <span class="highlight">Briefing</span>
+            Your<br><span class="outline">Briefing</span>
           </h1>
-          <p class="hero-subtitle">
-            AI-curated news across business, tech, music, and culture. 
-            Updated ${dashboard.cached ? 'recently' : 'just now'}.
-          </p>
-          <div class="scroll-indicator">Scroll to explore</div>
+          <p class="hero-subtitle">AI-curated news across tech, business, music, and culture.</p>
+          <div class="scroll-hint">Scroll to explore</div>
         </section>
-        
         ${renderSection('know', 'Stay Informed', 'Know', dashboard.know, 'section-know')}
         ${renderSection('watch', 'Start Watching', 'Watch', dashboard.watch, 'section-watch')}
         ${renderSection('listen', 'Start Listening', 'Listen', dashboard.listen, 'section-listen')}
       `;
-      
-      // Add click handlers
-      document.querySelectorAll('.card-3d').forEach(card => {
-        card.addEventListener('click', () => {
-          window.location.href = `/reports/${card.dataset.reportId}`;
-        });
-      });
-      
-      // Parallax on scroll
-      window.addEventListener('scroll', () => {
-        const scrollY = window.scrollY;
-        document.querySelectorAll('.section-title').forEach(el => {
-          el.style.transform = `translateX(${scrollY * 0.1}px)`;
-        });
-      });
     }
     
-    loadDashboard();
+    // Render report
+    async function renderReport(id) {
+      const report = await api(`/reports/${id}`);
+      const sectionClass = report.channel_slug === 'music' ? 'listen' : 
+                          report.channel_slug === 'pop-culture' || report.channel_slug === 'anime' ? 'watch' : 'know';
+      
+      const content = processYouTube(marked.parse(report.content || ''));
+      const img = report.image_data || report.image_url;
+      const sources = report.sources || [];
+      
+      document.getElementById('app').innerHTML = `
+        <article class="report-view">
+          <div class="report-back" onclick="history.back()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            Back
+          </div>
+          <div class="report-channel ${sectionClass}">${report.channel_name}</div>
+          <h1 class="report-title">${report.title}</h1>
+          ${report.subtitle ? `<p class="report-subtitle">${report.subtitle}</p>` : ''}
+          <div class="report-meta">${formatDate(report.created_at)} · ${report.read_time_min || 5} min read</div>
+          ${img ? `<img class="report-image" src="${img}" alt="">` : ''}
+          <div class="report-body">${content}</div>
+          ${sources.length ? `
+            <div class="report-sources">
+              <h4>Sources</h4>
+              ${sources.map(s => `<a href="${s.url}" target="_blank">${s.title || s.url}</a>`).join('')}
+            </div>
+          ` : ''}
+        </article>
+      `;
+      window.scrollTo(0, 0);
+    }
+    
+    // Render channel
+    async function renderChannel(slug) {
+      const [reports, channelList] = await Promise.all([
+        api(`/feed?channel=${slug}`),
+        channels.length ? Promise.resolve(channels) : api('/channels')
+      ]);
+      if (!channels.length) channels = channelList;
+      
+      const channel = channels.find(c => c.slug === slug) || { name: slug, description: '' };
+      
+      document.getElementById('app').innerHTML = `
+        <div class="channel-view">
+          <div class="channel-header">
+            <h1 class="channel-title" style="color: ${channel.color}">${channel.name}</h1>
+            <p class="channel-desc">${channel.description || ''}</p>
+          </div>
+          <div class="feed-list">
+            ${reports.map(r => {
+              const img = r.image_data || r.image_url;
+              return `
+                <div class="feed-item" onclick="navigate('report', '${r.id}')">
+                  ${img ? `<img class="feed-item-image" src="${img}" alt="">` : ''}
+                  <div class="feed-item-content">
+                    <div class="feed-item-channel">${r.channel_name}</div>
+                    <h3 class="feed-item-title">${r.title}</h3>
+                    ${r.subtitle ? `<p class="feed-item-subtitle">${r.subtitle}</p>` : ''}
+                    <div class="feed-item-meta">${formatDate(r.created_at)} · ${r.read_time_min || 5} min</div>
+                  </div>
+                </div>
+              `;
+            }).join('') || '<p style="opacity:0.5">No reports yet</p>'}
+          </div>
+        </div>
+      `;
+      window.scrollTo(0, 0);
+    }
+    
+    // Main render
+    function render(view, param) {
+      if (view === 'report') renderReport(param);
+      else if (view === 'channel') renderChannel(param);
+      else renderHome();
+    }
+    
+    // Init
+    const { view, param } = parseUrl();
+    render(view, param);
   </script>
 </body>
 </html>
