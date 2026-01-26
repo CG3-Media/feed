@@ -724,12 +724,14 @@
     }
     
     // Render dashboard (home view)
-    async function renderDashboard() {
+    async function renderDashboard(forceRefresh = false) {
       const main = document.getElementById('main-content');
-      const dashboard = await api('/dashboard');
+      const dashboard = await api(`/dashboard${forceRefresh ? '?refresh=true' : ''}`);
+      
+      const cacheInfo = dashboard.cached ? `Cached ${formatDate(dashboard.cached_at)}` : 'Just updated';
       
       const refreshBtn = `
-        <button class="refresh-btn" id="refresh-btn">
+        <button class="refresh-btn" id="refresh-btn" data-dashboard-refresh="true">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="23 4 23 10 17 10"></polyline>
             <polyline points="1 20 1 14 7 14"></polyline>
@@ -737,6 +739,7 @@
           </svg>
           Refresh
         </button>
+        <span style="font-size: 12px; color: var(--text-muted); margin-left: 8px;">${cacheInfo}</span>
       `;
       
       const knowIcon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
@@ -1137,6 +1140,15 @@
       const refreshBtn = e.target.closest('.refresh-btn');
       if (refreshBtn) {
         refreshBtn.classList.add('loading');
+        
+        // Check if it's a dashboard refresh
+        if (refreshBtn.dataset.dashboardRefresh) {
+          renderDashboard(true).then(() => {
+            showToast('Dashboard refreshed');
+          });
+          return;
+        }
+        
         const oldCount = document.querySelectorAll('.report-card').length;
         renderFeed().then(() => {
           const newCount = document.querySelectorAll('.report-card').length;

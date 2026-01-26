@@ -285,9 +285,24 @@ app.get('/api/feed', async (req, res) => {
   }
 });
 
+// Dashboard cache (1 hour TTL)
+let dashboardCache = null;
+let dashboardCacheTime = null;
+const DASHBOARD_CACHE_TTL = 60 * 60 * 1000; // 1 hour
+
 // Get dashboard briefing - AI-categorized recent content
 app.get('/api/dashboard', async (req, res) => {
   const apiKey = process.env.ANTHROPIC_API_KEY;
+  const forceRefresh = req.query.refresh === 'true';
+  
+  // Check cache
+  if (!forceRefresh && dashboardCache && dashboardCacheTime && (Date.now() - dashboardCacheTime < DASHBOARD_CACHE_TTL)) {
+    return res.json({
+      ...dashboardCache,
+      cached: true,
+      cached_at: new Date(dashboardCacheTime).toISOString()
+    });
+  }
   
   try {
     // Get recent reports from last 7 days
@@ -374,7 +389,11 @@ Respond with valid JSON only (no markdown):
       generated_at: new Date().toISOString()
     };
     
-    res.json(dashboard);
+    // Cache the results
+    dashboardCache = dashboard;
+    dashboardCacheTime = Date.now();
+    
+    res.json({ ...dashboard, cached: false });
   } catch (err) {
     console.error('Dashboard error:', err);
     res.status(500).json({ error: err.message });
