@@ -4,6 +4,7 @@ const { Pool } = require('pg');
 const { marked } = require('marked');
 const path = require('path');
 const crypto = require('crypto');
+const Anthropic = require('@anthropic-ai/sdk');
 
 const app = express();
 app.use(express.json({ limit: '5mb' }));
@@ -516,6 +517,121 @@ app.get('/api/editorial/summary', async (req, res) => {
       totalReportsLast7Days: recentReports.rows.length
     });
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============ AI RECOMMENDATIONS ============
+
+// Get AI-curated recommendations from recent reports
+// GET /api/recommendations?days=7&limit=10
+app.get('/api/recommendations', async (req, res) => {
+  const { days = 7, limit = 10 } = req.query;
+  
+  // Check for API key
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
+  }
+  
+  try {
+    // 1. Pull recent reports
+    const result = await pool.query(`
+      SELECT r.id, r.title, r.subtitle, r.content, r.image_url, r.created_at, r.read_time_min,
+             c.name as channel_name, c.slug as channel_slug, c.color as channel_color
+      FROM feed_reports r
+      LEFT JOIN feed_channels c ON r.channel_id = c.id
+      WHERE r.created_at > NOW() - INTERVAL '${parseInt(days)} days'
+      ORDER BY r.created_at DESC
+      LIMIT 50
+    `);
+    
+    if (result.rows.length === 0) {
+      return res.json({ 
+        recommendations: [], 
+        reasoning: 'No reports found in the specified time range.',
+        report_count: 0 
+      });
+    }
+    
+    // 2. Format reports for Claude
+    const reportsForAnalysis = result.rows.map(r => ({
+      id: r.id,
+      title: r.title,
+      subtitle: r.subtitle,
+      channel: r.channel_name,
+      content: r.content?.substring(0, 500) + (r.content?.length > 500 ? '...' : ''), // Truncate for token efficiency
+      created_at: r.created_at,
+      read_time_min: r.read_time_min
+    }));
+    
+    // 3. Send to Claude for analysis
+    const anthropic = new Anthropic({ apiKey });
+    
+    const message = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2000,
+      messages: [{
+        role: 'user',
+        content: `You are curating a personalized news feed for Corey. Analyze these recent reports and pick the ${parseInt(limit)} most important/interesting items.
+
+Consider:
+- Timeliness and relevance
+- Impact and significance 
+- Variety across channels (don't just pick from one category)
+- Things Corey would actually want to know about
+
+Reports to analyze:
+${JSON.stringify(reportsForAnalysis, null, 2)}
+
+Respond with valid JSON only (no markdown, no code blocks):
+{
+  "recommendations": [
+    {
+      "id": <report_id>,
+      "reason": "<brief explanation why this is important/interesting>"
+    }
+  ],
+  "overall_summary": "<1-2 sentence summary of what's notable this week>"
+}`
+      }]
+    });
+    
+    // 4. Parse Claude's response
+    let parsed;
+    try {
+      const responseText = message.content[0].text;
+      parsed = JSON.parse(responseText);
+    } catch (parseErr) {
+      return res.status(500).json({ 
+        error: 'Failed to parse AI response', 
+        raw: message.content[0].text 
+      });
+    }
+    
+    // 5. Enrich recommendations with full report data
+    const recommendedIds = parsed.recommendations.map(r => r.id);
+    const reasonMap = Object.fromEntries(parsed.recommendations.map(r => [r.id, r.reason]));
+    
+    const enriched = result.rows
+      .filter(r => recommendedIds.includes(r.id))
+      .map(r => ({
+        ...r,
+        content_preview: r.content?.substring(0, 200) + (r.content?.length > 200 ? '...' : ''),
+        content: undefined, // Don't send full content in list
+        ai_reason: reasonMap[r.id]
+      }))
+      .sort((a, b) => recommendedIds.indexOf(a.id) - recommendedIds.indexOf(b.id)); // Preserve Claude's ranking
+    
+    res.json({
+      recommendations: enriched,
+      overall_summary: parsed.overall_summary,
+      report_count: result.rows.length,
+      generated_at: new Date().toISOString()
+    });
+    
+  } catch (err) {
+    console.error('Recommendations error:', err);
     res.status(500).json({ error: err.message });
   }
 });
