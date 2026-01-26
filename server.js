@@ -3,15 +3,82 @@ const express = require('express');
 const { Pool } = require('pg');
 const { marked } = require('marked');
 const path = require('path');
+const crypto = require('crypto');
 
 const app = express();
 app.use(express.json());
-app.use(express.static('public'));
+
+// Auth token from env (or generate one)
+const FEED_TOKEN = process.env.FEED_TOKEN || '824c578a864bc97df5c1e8b61fb614f8b76c8ac725a32f5c';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.DATABASE_URL?.includes('pscale') ? { rejectUnauthorized: true } : false
 });
+
+// Cookie parser middleware (simple implementation)
+app.use((req, res, next) => {
+  req.cookies = {};
+  const cookieHeader = req.headers.cookie;
+  if (cookieHeader) {
+    cookieHeader.split(';').forEach(cookie => {
+      const [name, value] = cookie.trim().split('=');
+      req.cookies[name] = value;
+    });
+  }
+  next();
+});
+
+// Auth route - sets cookie and redirects
+app.get('/auth', (req, res) => {
+  const { token } = req.query;
+  if (token === FEED_TOKEN) {
+    // Set httpOnly cookie for 1 year
+    res.setHeader('Set-Cookie', `feed_token=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=31536000`);
+    res.redirect('/');
+  } else {
+    res.status(401).send('Invalid token');
+  }
+});
+
+// Logout route
+app.get('/logout', (req, res) => {
+  res.setHeader('Set-Cookie', 'feed_token=; Path=/; HttpOnly; Max-Age=0');
+  res.redirect('/auth-required');
+});
+
+// Auth check middleware for frontend
+function requireAuth(req, res, next) {
+  const token = req.cookies.feed_token;
+  if (token === FEED_TOKEN) {
+    next();
+  } else {
+    // Serve auth required page
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Feed - Access Required</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #fafafa; }
+          .container { text-align: center; }
+          h1 { font-size: 48px; margin-bottom: 16px; }
+          p { color: #666; font-size: 18px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h1>🔒</h1>
+          <p>Access this feed via your personal link.</p>
+        </div>
+      </body>
+      </html>
+    `);
+  }
+}
+
+// Serve static files (CSS, JS, etc) without auth
+app.use('/assets', express.static(path.join(__dirname, 'public', 'assets')));
 
 // Initialize database tables
 async function initDB() {
@@ -65,7 +132,7 @@ async function initDB() {
   console.log('Database initialized');
 }
 
-// API Routes
+// API Routes (no auth - used by Dexo)
 
 // Get all channels
 app.get('/api/channels', async (req, res) => {
@@ -249,8 +316,21 @@ app.delete('/api/reports/:id', async (req, res) => {
   }
 });
 
-// Serve SPA
-app.get('*', (req, res) => {
+// Protected frontend routes
+app.get('/', requireAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.get('/settings', requireAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.get('/reports/*', requireAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Catch-all for SPA routes (with auth)
+app.get('*', requireAuth, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
@@ -259,6 +339,7 @@ const PORT = process.env.PORT || 3000;
 initDB().then(() => {
   app.listen(PORT, () => {
     console.log(`Feed running on port ${PORT}`);
+    console.log(`Auth link: /auth?token=${FEED_TOKEN}`);
   });
 }).catch(err => {
   console.error('Failed to initialize database:', err);
