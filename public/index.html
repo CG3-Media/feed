@@ -83,6 +83,65 @@
     
     .nav-links a:hover, .nav-links a.active { opacity: 1; }
     
+    /* Mobile menu */
+    .mobile-menu-btn {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--white);
+      padding: 8px;
+      cursor: pointer;
+    }
+    
+    .mobile-menu {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--black);
+      z-index: 200;
+      padding: 100px 24px 48px;
+      flex-direction: column;
+      gap: 8px;
+      overflow-y: auto;
+    }
+    
+    .mobile-menu.open { display: flex; }
+    
+    .mobile-menu-close {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      background: none;
+      border: none;
+      color: var(--white);
+      font-size: 32px;
+      cursor: pointer;
+      padding: 8px;
+    }
+    
+    .mobile-menu a {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 0;
+      font-size: 20px;
+      font-weight: 500;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .mobile-menu .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    
+    @media (max-width: 768px) {
+      .mobile-menu-btn { display: block; }
+    }
+    
     /* Channel pills */
     .channel-pills {
       display: flex;
@@ -564,13 +623,147 @@
     }
     
     @media (max-width: 768px) {
-      nav { padding: 16px 24px; }
-      .hero, .section, .report-view, .channel-view { padding-left: 24px; padding-right: 24px; }
-      .card-grid { grid-template-columns: 1fr; }
-      .card.featured { grid-column: span 1; }
-      .feed-item { flex-direction: column; }
-      .feed-item-image { width: 100%; height: 180px; }
+      nav { 
+        padding: 16px 20px;
+        background: rgba(10,10,10,0.95);
+      }
+      
+      .logo { font-size: 24px; }
+      
       .nav-links { display: none; }
+      
+      .hero {
+        padding: 100px 20px 60px;
+        min-height: auto;
+      }
+      
+      .hero-title {
+        font-size: 48px;
+        letter-spacing: -2px;
+      }
+      
+      .hero-subtitle {
+        font-size: 16px;
+      }
+      
+      .channel-pills {
+        margin-top: 32px;
+        gap: 8px;
+      }
+      
+      .channel-pill {
+        padding: 10px 16px;
+        font-size: 13px;
+      }
+      
+      .scroll-hint { display: none; }
+      
+      .section {
+        padding: 60px 20px;
+        min-height: auto;
+      }
+      
+      .section-title {
+        font-size: 36px;
+        letter-spacing: -1px;
+      }
+      
+      .section-header { margin-bottom: 32px; }
+      
+      .section-header-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+      
+      .section-see-all {
+        padding-bottom: 0;
+      }
+      
+      .card-grid { 
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+      
+      .card.featured { grid-column: span 1; }
+      
+      .card-image { height: 160px; }
+      .card.featured .card-image { height: 200px; }
+      
+      .card-body { padding: 20px; }
+      
+      .card-title { font-size: 20px; }
+      .card.featured .card-title { font-size: 24px; }
+      
+      /* Report view mobile */
+      .report-view {
+        padding: 100px 20px 60px;
+      }
+      
+      .report-back { margin-bottom: 32px; }
+      
+      .report-title {
+        font-size: 28px;
+        letter-spacing: -1px;
+      }
+      
+      .report-subtitle {
+        font-size: 18px;
+      }
+      
+      .report-body {
+        font-size: 17px;
+        line-height: 1.7;
+      }
+      
+      .report-body h2 { font-size: 24px; }
+      .report-body h3 { font-size: 20px; }
+      
+      /* Channel view mobile */
+      .channel-view {
+        padding: 100px 20px 60px;
+      }
+      
+      .channel-title {
+        font-size: 36px;
+        letter-spacing: -1px;
+      }
+      
+      .channel-desc {
+        font-size: 16px;
+      }
+      
+      .feed-item {
+        flex-direction: column;
+        padding: 20px;
+        gap: 16px;
+      }
+      
+      .feed-item-image {
+        width: 100%;
+        height: 160px;
+      }
+      
+      .feed-item-title {
+        font-size: 20px;
+      }
+      
+      .feed-item-subtitle {
+        font-size: 14px;
+      }
+    }
+    
+    /* Small phones */
+    @media (max-width: 400px) {
+      .hero-title { font-size: 40px; }
+      .section-title { font-size: 28px; }
+      .channel-title { font-size: 28px; }
+      .report-title { font-size: 24px; }
+      
+      .channel-pill {
+        padding: 8px 14px;
+        font-size: 12px;
+      }
     }
   </style>
 </head>
@@ -580,7 +773,20 @@
   <nav>
     <div class="logo" onclick="navigate('home')">Feed</div>
     <div class="nav-links" id="nav-links"></div>
+    <button class="mobile-menu-btn" onclick="toggleMobileMenu()">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+    </button>
   </nav>
+  
+  <div class="mobile-menu" id="mobile-menu">
+    <button class="mobile-menu-close" onclick="toggleMobileMenu()">×</button>
+    <a onclick="navigate('home'); toggleMobileMenu()">Home</a>
+    <div id="mobile-menu-channels"></div>
+  </div>
   
   <main id="app">
     <div class="loading">Loading...</div>
@@ -658,6 +864,11 @@
     // State
     let channels = [];
     let currentView = 'home';
+    
+    // Mobile menu
+    function toggleMobileMenu() {
+      document.getElementById('mobile-menu').classList.toggle('open');
+    }
     
     // API
     async function api(endpoint) {
@@ -748,6 +959,13 @@
       
       document.getElementById('nav-links').innerHTML = channels.slice(0, 5).map(c => 
         `<a onclick="navigate('channel', '${c.slug}')">${c.name}</a>`
+      ).join('');
+      
+      document.getElementById('mobile-menu-channels').innerHTML = channels.map(c => 
+        `<a onclick="navigate('channel', '${c.slug}'); toggleMobileMenu()">
+          <span class="dot" style="background:${c.color}"></span>
+          ${c.name}
+        </a>`
       ).join('');
       
       const channelPills = channels.map(c => 
