@@ -124,9 +124,20 @@ async function initDB() {
       content TEXT NOT NULL,
       image_url TEXT,
       sources JSONB DEFAULT '[]',
+      key_entities JSONB DEFAULT '[]',
       read_time_min INTEGER DEFAULT 5,
       created_at TIMESTAMP DEFAULT NOW()
     )
+  `);
+  
+  // Add key_entities column if it doesn't exist (migration)
+  await pool.query(`
+    DO $$ 
+    BEGIN 
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='feed_reports' AND column_name='key_entities') THEN
+        ALTER TABLE feed_reports ADD COLUMN key_entities JSONB DEFAULT '[]';
+      END IF;
+    END $$;
   `);
   
   console.log('Database initialized');
@@ -266,14 +277,147 @@ app.get('/api/reports/:id', async (req, res) => {
 
 // Create report (for Dexo to use)
 app.post('/api/reports', async (req, res) => {
-  const { channel_id, title, subtitle, content, image_url, sources, read_time_min } = req.body;
+  const { channel_id, title, subtitle, content, image_url, sources, key_entities, read_time_min } = req.body;
   try {
     const result = await pool.query(
-      `INSERT INTO feed_reports (channel_id, title, subtitle, content, image_url, sources, read_time_min) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [channel_id, title, subtitle, content, image_url, JSON.stringify(sources || []), read_time_min || 5]
+      `INSERT INTO feed_reports (channel_id, title, subtitle, content, image_url, sources, key_entities, read_time_min) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [channel_id, title, subtitle, content, image_url, JSON.stringify(sources || []), JSON.stringify(key_entities || []), read_time_min || 5]
     );
     res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============ EDITORIAL ENDPOINTS ============
+
+// Check if entities have been covered recently
+// GET /api/editorial/coverage?entities=["J. Cole","The Fall-Off"]&days=7
+app.get('/api/editorial/coverage', async (req, res) => {
+  const { entities, days = 7 } = req.query;
+  try {
+    const entityList = JSON.parse(entities || '[]');
+    if (entityList.length === 0) {
+      return res.json({ covered: [], uncovered: [] });
+    }
+    
+    // Find reports from last N days that mention any of these entities
+    const result = await pool.query(`
+      SELECT id, title, key_entities, created_at
+      FROM feed_reports
+      WHERE created_at > NOW() - INTERVAL '${parseInt(days)} days'
+      AND key_entities ?| $1
+      ORDER BY created_at DESC
+    `, [entityList]);
+    
+    // Figure out which entities were covered
+    const coveredEntities = new Set();
+    result.rows.forEach(report => {
+      const reportEntities = report.key_entities || [];
+      entityList.forEach(e => {
+        if (reportEntities.some(re => re.toLowerCase() === e.toLowerCase())) {
+          coveredEntities.add(e);
+        }
+      });
+    });
+    
+    const covered = entityList.filter(e => coveredEntities.has(e));
+    const uncovered = entityList.filter(e => !coveredEntities.has(e));
+    
+    res.json({
+      covered,
+      uncovered,
+      recentReports: result.rows.map(r => ({ id: r.id, title: r.title, date: r.created_at }))
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get all entities covered in recent reports
+// GET /api/editorial/recent-entities?days=7&channel=music
+app.get('/api/editorial/recent-entities', async (req, res) => {
+  const { days = 7, channel } = req.query;
+  try {
+    let query = `
+      SELECT r.key_entities, r.title, r.created_at, c.slug as channel_slug
+      FROM feed_reports r
+      LEFT JOIN feed_channels c ON r.channel_id = c.id
+      WHERE r.created_at > NOW() - INTERVAL '${parseInt(days)} days'
+    `;
+    const params = [];
+    
+    if (channel) {
+      query += ' AND c.slug = $1';
+      params.push(channel);
+    }
+    
+    query += ' ORDER BY r.created_at DESC';
+    
+    const result = await pool.query(query, params);
+    
+    // Aggregate all entities with their last coverage date
+    const entityMap = {};
+    result.rows.forEach(report => {
+      const entities = report.key_entities || [];
+      entities.forEach(entity => {
+        const key = entity.toLowerCase();
+        if (!entityMap[key] || new Date(report.created_at) > new Date(entityMap[key].lastCovered)) {
+          entityMap[key] = {
+            entity,
+            lastCovered: report.created_at,
+            reportTitle: report.title
+          };
+        }
+      });
+    });
+    
+    res.json({
+      entities: Object.values(entityMap),
+      reportCount: result.rows.length
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Editorial summary - what's been covered, what's stale
+// GET /api/editorial/summary
+app.get('/api/editorial/summary', async (req, res) => {
+  try {
+    // Get coverage stats by channel for last 7 days
+    const channelStats = await pool.query(`
+      SELECT c.name, c.slug, COUNT(r.id) as report_count, MAX(r.created_at) as last_report
+      FROM feed_channels c
+      LEFT JOIN feed_reports r ON c.id = r.channel_id AND r.created_at > NOW() - INTERVAL '7 days'
+      GROUP BY c.id, c.name, c.slug
+      ORDER BY c.name
+    `);
+    
+    // Get most covered entities in last 7 days
+    const recentReports = await pool.query(`
+      SELECT key_entities FROM feed_reports WHERE created_at > NOW() - INTERVAL '7 days'
+    `);
+    
+    const entityCounts = {};
+    recentReports.rows.forEach(r => {
+      (r.key_entities || []).forEach(e => {
+        const key = e.toLowerCase();
+        entityCounts[key] = (entityCounts[key] || 0) + 1;
+      });
+    });
+    
+    const topEntities = Object.entries(entityCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 20)
+      .map(([entity, count]) => ({ entity, count }));
+    
+    res.json({
+      channelStats: channelStats.rows,
+      topEntities,
+      totalReportsLast7Days: recentReports.rows.length
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
