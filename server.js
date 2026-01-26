@@ -304,13 +304,36 @@ app.post('/api/reports', async (req, res) => {
 // Helper endpoint to fetch and convert image to base64
 app.post('/api/image-to-base64', async (req, res) => {
   const { url } = req.body;
+  if (!url) return res.status(400).json({ error: 'URL required' });
+  
   try {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error('Failed to fetch image');
-    const buffer = await response.arrayBuffer();
-    const base64 = Buffer.from(buffer).toString('base64');
-    const contentType = response.headers.get('content-type') || 'image/jpeg';
-    res.json({ base64: `data:${contentType};base64,${base64}` });
+    const https = require('https');
+    const http = require('http');
+    const protocol = url.startsWith('https') ? https : http;
+    
+    const fetchImage = (imageUrl) => new Promise((resolve, reject) => {
+      protocol.get(imageUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } }, (response) => {
+        // Handle redirects
+        if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+          return fetchImage(response.headers.location).then(resolve).catch(reject);
+        }
+        if (response.statusCode !== 200) {
+          return reject(new Error(`HTTP ${response.statusCode}`));
+        }
+        const chunks = [];
+        response.on('data', chunk => chunks.push(chunk));
+        response.on('end', () => {
+          const buffer = Buffer.concat(chunks);
+          const contentType = response.headers['content-type'] || 'image/jpeg';
+          resolve({ buffer, contentType });
+        });
+        response.on('error', reject);
+      }).on('error', reject);
+    });
+    
+    const { buffer, contentType } = await fetchImage(url);
+    const base64 = `data:${contentType};base64,${buffer.toString('base64')}`;
+    res.json({ base64 });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
