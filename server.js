@@ -379,7 +379,7 @@ app.get('/api/dashboard', async (req, res) => {
         role: 'user',
         content: `Categorize these news items into three sections for a personal briefing dashboard.
 
-**KNOW** - News and information. Business, tech, announcements, industry updates. Anything that's primarily informational goes here. This is the default category.
+**KNOW** - News and information. Business, tech, local news, policy, politics, announcements, industry updates. Anything that's primarily informational goes here. This includes local/California/LA news and policy updates. This is the default category.
 
 **WATCH** - Videos you can watch RIGHT NOW. Include if ANY of these are true:
   - Contains youtube.com or youtu.be link
@@ -404,6 +404,8 @@ Examples:
 - "Grammy nominations" → KNOW (news)
 - "New single streaming now" → LISTEN
 - Tech/business news → KNOW (always)
+- Local/LA/California policy news → KNOW (always)
+- City council, mayor, governor updates → KNOW
 
 When in doubt, KNOW. WATCH/LISTEN should feel like "I can click and consume this right now."
 
