@@ -652,9 +652,7 @@
                   </div>
                   <h2 class="report-title">${r.title}</h2>
                   ${r.subtitle ? `<p class="report-subtitle">${r.subtitle}</p>` : ''}
-                  <div class="report-footer">
-                    <span>${r.read_time_min} min read</span>
-                  </div>
+                  
                 </div>
                 ${(r.image_data || r.image_url) ? `<img class="report-image" src="${r.image_data || r.image_url}" alt="">` : ''}
               </div>
@@ -679,7 +677,7 @@
           <div class="report-meta">
             <span class="report-channel" style="color: ${report.channel_color}">${report.channel_name}</span>
             <span class="report-date">· ${formatDate(report.created_at)}</span>
-            <span>· ${report.read_time_min} min read</span>
+            
           </div>
           <h1 class="report-title">${report.title}</h1>
           ${report.subtitle ? `<p class="report-subtitle">${report.subtitle}</p>` : ''}
