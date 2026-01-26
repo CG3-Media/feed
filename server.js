@@ -381,19 +381,31 @@ app.get('/api/dashboard', async (req, res) => {
 
 **KNOW** - News and information. Business, tech, announcements, industry updates. Anything that's primarily informational goes here. This is the default category.
 
-**WATCH** - Videos you can click and watch RIGHT NOW. The content must contain an actual embedded YouTube link, trailer link, or video. Look for youtube.com, youtu.be, or explicit mentions of "watch the trailer" with a link. If the article is just NEWS about something coming soon (even a movie/show), it goes in KNOW. "Announced", "coming soon", "drops next month" = KNOW, not WATCH.
+**WATCH** - Videos you can watch RIGHT NOW. Include if ANY of these are true:
+  - Contains youtube.com or youtu.be link
+  - Says "trailer" + "watch" or "out now" or "dropped"
+  - New music video that's released (not upcoming)
+  - Episode/season currently airing ("now airing", "premiered", "streaming on")
+  Do NOT include: announcements about future releases, movies not yet in theaters, shows coming later.
 
-**LISTEN** - Music you can stream RIGHT NOW. The content must contain Spotify, Apple Music, or SoundCloud links to actual released tracks. Look for open.spotify.com, music.apple.com, or explicit "listen now" / "out now" / "stream" language with links. Album announcements, tour news, Grammy news, artist interviews = KNOW, not LISTEN.
+**LISTEN** - Music you can stream RIGHT NOW. Include if ANY of these are true:
+  - Contains spotify.com, music.apple.com, or soundcloud.com link
+  - Says "out now", "available now", "stream", "listen" for a song/album
+  - New single/album that HAS BEEN RELEASED (past tense)
+  - "Drops today" or "just dropped"
+  Do NOT include: album announcements for future dates, tour news, award news, artist interviews.
 
-Key rules:
-- "Album drops February 6" → KNOW (not out yet, just announcement)
-- "Season 2 announced" → KNOW (announcement, nothing to watch)
-- "New trailer" + has youtube.com link in content → WATCH
-- "Grammy nominations" → KNOW (news about awards)
-- "New single out now" + has spotify.com link in content → LISTEN
-- Tech/business/anime news → KNOW (default)
+Examples:
+- "Album drops February 6" → KNOW (future date)
+- "New album out now" or "just dropped" → LISTEN (released)
+- "Season 2 announced" → KNOW (future)
+- "Season 3 now airing" or "premiered yesterday" → WATCH (available)
+- "Trailer dropped" + youtube link → WATCH
+- "Grammy nominations" → KNOW (news)
+- "New single streaming now" → LISTEN
+- Tech/business news → KNOW (always)
 
-Be strict: when in doubt, KNOW. Only WATCH/LISTEN if there's clearly available media linked in the content.
+When in doubt, KNOW. WATCH/LISTEN should feel like "I can click and consume this right now."
 
 Items:
 ${JSON.stringify(reportsForAnalysis, null, 2)}
