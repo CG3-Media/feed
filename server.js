@@ -151,6 +151,26 @@ async function initDB() {
     END $$;
   `);
   
+  // Add favorited column to topics
+  await pool.query(`
+    DO $$ 
+    BEGIN 
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='feed_topics' AND column_name='favorited') THEN
+        ALTER TABLE feed_topics ADD COLUMN favorited BOOLEAN DEFAULT false;
+      END IF;
+    END $$;
+  `);
+  
+  // Add favorited column to reports
+  await pool.query(`
+    DO $$ 
+    BEGIN 
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='feed_reports' AND column_name='favorited') THEN
+        ALTER TABLE feed_reports ADD COLUMN favorited BOOLEAN DEFAULT false;
+      END IF;
+    END $$;
+  `);
+  
   console.log('Database initialized');
 }
 
@@ -187,7 +207,7 @@ app.get('/api/topics', async (req, res) => {
       SELECT t.*, c.name as channel_name, c.slug as channel_slug 
       FROM feed_topics t 
       LEFT JOIN feed_channels c ON t.channel_id = c.id 
-      ORDER BY t.created_at DESC
+      ORDER BY t.favorited DESC NULLS LAST, t.created_at DESC
     `);
     res.json(result.rows);
   } catch (err) {
@@ -521,6 +541,68 @@ app.get('/api/editorial/summary', async (req, res) => {
   }
 });
 
+// ============ FAVORITES ============
+
+// Toggle topic favorite
+app.post('/api/topics/:id/favorite', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'UPDATE feed_topics SET favorited = NOT COALESCE(favorited, false) WHERE id = $1 RETURNING id, query, favorited',
+      [req.params.id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Topic not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Toggle report favorite
+app.post('/api/reports/:id/favorite', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'UPDATE feed_reports SET favorited = NOT COALESCE(favorited, false) WHERE id = $1 RETURNING id, title, favorited',
+      [req.params.id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Report not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get all favorited topics
+app.get('/api/favorites/topics', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT t.*, c.name as channel_name FROM feed_topics t LEFT JOIN feed_channels c ON t.channel_id = c.id WHERE t.favorited = true ORDER BY t.query'
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get all favorited reports
+app.get('/api/favorites/reports', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT r.id, r.title, r.subtitle, r.image_url, r.created_at, c.name as channel_name, c.slug as channel_slug
+      FROM feed_reports r 
+      LEFT JOIN feed_channels c ON r.channel_id = c.id 
+      WHERE r.favorited = true 
+      ORDER BY r.created_at DESC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ============ AI RECOMMENDATIONS ============
 
 // Get AI-curated recommendations from recent reports
@@ -554,7 +636,15 @@ app.get('/api/recommendations', async (req, res) => {
       });
     }
     
-    // 2. Format reports for Claude
+    // 2. Get favorited topics and reports for context
+    const favTopics = await pool.query('SELECT query FROM feed_topics WHERE favorited = true');
+    const favReports = await pool.query('SELECT title, key_entities FROM feed_reports WHERE favorited = true ORDER BY created_at DESC LIMIT 20');
+    
+    const favoritedTopics = favTopics.rows.map(t => t.query);
+    const favoritedReportTitles = favReports.rows.map(r => r.title);
+    const favoritedEntities = [...new Set(favReports.rows.flatMap(r => r.key_entities || []))];
+    
+    // 3. Format reports for Claude
     const reportsForAnalysis = result.rows.map(r => ({
       id: r.id,
       title: r.title,
@@ -565,7 +655,16 @@ app.get('/api/recommendations', async (req, res) => {
       read_time_min: r.read_time_min
     }));
     
-    // 3. Send to Claude for analysis
+    // 4. Build context about preferences
+    let preferencesContext = '';
+    if (favoritedTopics.length > 0) {
+      preferencesContext += `\nCorey's favorited topics (weight these higher): ${favoritedTopics.join(', ')}`;
+    }
+    if (favoritedEntities.length > 0) {
+      preferencesContext += `\nEntities from reports Corey has hearted: ${favoritedEntities.slice(0, 15).join(', ')}`;
+    }
+    
+    // 5. Send to Claude for analysis
     const anthropic = new Anthropic({ apiKey });
     
     const message = await anthropic.messages.create({
@@ -580,6 +679,7 @@ Consider:
 - Impact and significance 
 - Variety across channels (don't just pick from one category)
 - Things Corey would actually want to know about
+${preferencesContext}
 
 Reports to analyze:
 ${JSON.stringify(reportsForAnalysis, null, 2)}
