@@ -500,6 +500,45 @@ app.delete('/api/filters/:id', async (req, res) => {
   }
 });
 
+// Update a report (PATCH for partial updates)
+app.patch('/api/reports/:id', async (req, res) => {
+  const { id } = req.params;
+  const updates = req.body;
+  
+  // Build dynamic update query for provided fields only
+  const allowedFields = ['title', 'subtitle', 'content', 'image_url', 'image_data', 'sources', 'key_entities', 'read_time_min'];
+  const setClauses = [];
+  const values = [];
+  let paramIndex = 1;
+  
+  for (const field of allowedFields) {
+    if (updates[field] !== undefined) {
+      setClauses.push(`${field} = $${paramIndex}`);
+      values.push(field === 'sources' || field === 'key_entities' ? JSON.stringify(updates[field]) : updates[field]);
+      paramIndex++;
+    }
+  }
+  
+  if (setClauses.length === 0) {
+    return res.status(400).json({ error: 'No valid fields to update' });
+  }
+  
+  values.push(id);
+  
+  try {
+    const result = await pool.query(
+      `UPDATE feed_reports SET ${setClauses.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
+      values
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Report not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.delete('/api/reports/:id', async (req, res) => {
   try {
     await pool.query('DELETE FROM feed_reports WHERE id = $1', [req.params.id]);
