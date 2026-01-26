@@ -377,18 +377,25 @@ app.get('/api/dashboard', async (req, res) => {
       max_tokens: 1500,
       messages: [{
         role: 'user',
-        content: `Categorize these news items into three sections for a personal briefing dashboard:
+        content: `Categorize these news items into three sections for a personal briefing dashboard.
 
-**KNOW** - News and information to be informed about. Things happening in the world, business updates, tech news, announcements. NOT primarily media to consume.
+**KNOW** - News and information. Business, tech, announcements, industry updates. Anything that's primarily informational goes here. This is the default category.
 
-**WATCH** - Content where the PRIMARY purpose is watching video. Movie trailers, video essays, YouTube videos, visual content. The item should be ABOUT something to watch, not just news that happens to mention a video.
+**WATCH** - Videos available to watch RIGHT NOW. Only include if the content contains or links to an actual video that exists today: a trailer that just dropped, a YouTube video, a music video. Do NOT include news about upcoming movies/shows that aren't released yet. Do NOT include announcements about future content.
 
-**LISTEN** - New music to listen to. Album releases, singles, songs, playlists. The item should be ABOUT new music to hear, not just news about an artist.
+**LISTEN** - Music available to stream RIGHT NOW. Only include if there's an actual song/album/single that is OUT and can be played today. Do NOT include news about upcoming albums, tour announcements, award nominations, or artist news. Those go in KNOW.
+
+Key rules:
+- "Artist announces album coming next month" → KNOW (not available yet)
+- "New trailer drops for upcoming film" → WATCH (trailer is available now)
+- "Artist wins Grammy" → KNOW (news, not media)
+- "New single out now with Spotify link" → LISTEN (available to play)
+- Tech/business news → KNOW (always)
 
 Items:
 ${JSON.stringify(reportsForAnalysis, null, 2)}
 
-Pick the 5 best items for each category. An item can only be in ONE category. Choose the most fitting category based on what the content is primarily about.
+Pick up to 5 items for each category. An item can only be in ONE category. If unsure, default to KNOW. It's fine if WATCH or LISTEN have fewer than 5 or even 0 items.
 
 Respond with valid JSON only (no markdown):
 {
