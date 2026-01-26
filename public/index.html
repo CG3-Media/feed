@@ -16,10 +16,10 @@
       --black: #0a0a0a;
       --white: #fafafa;
       --gray: #888;
-      --know-color: #2563eb;
-      --watch-color: #ff6b5b;
-      --listen-color: #5eead4;
-      --accent: #fbbf24;
+      --know-color: #00d4ff;
+      --watch-color: #ff0066;
+      --listen-color: #00ff88;
+      --accent: #ffea00;
     }
     
     html { scroll-behavior: smooth; }
@@ -337,9 +337,9 @@
     
     .section-see-all:hover { opacity: 1; }
     
-    .section-know { background: linear-gradient(160deg, #1e3a8a 0%, #1e40af 50%, #2563eb 100%); }
-    .section-watch { background: linear-gradient(160deg, #c73e3a 0%, #e85a52 50%, #ff6b5b 100%); }
-    .section-listen { background: linear-gradient(160deg, #0d9488 0%, #2dd4bf 50%, #5eead4 100%); }
+    .section-know { background: linear-gradient(160deg, #0066cc 0%, #0099ff 50%, #00d4ff 100%); }
+    .section-watch { background: linear-gradient(160deg, #990044 0%, #cc0055 50%, #ff0066 100%); }
+    .section-listen { background: linear-gradient(160deg, #006644 0%, #00cc66 50%, #00ff88 100%); }
     
     /* Card grid */
     .card-grid {
@@ -1069,6 +1069,19 @@
       <div class="full-menu-channels" id="menu-channels"></div>
     </div>
     <div class="full-menu-section">
+      <div class="full-menu-label">View</div>
+      <div class="full-menu-item" onclick="navigate('all'); toggleMenu()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:0.5">
+          <rect x="3" y="3" width="7" height="7"></rect>
+          <rect x="14" y="3" width="7" height="7"></rect>
+          <rect x="3" y="14" width="7" height="7"></rect>
+          <rect x="14" y="14" width="7" height="7"></rect>
+        </svg>
+        <span class="full-menu-item-name">All Reports</span>
+        <span class="full-menu-item-desc">See everything in one feed</span>
+      </div>
+    </div>
+    <div class="full-menu-section">
       <div class="full-menu-label">Manage</div>
       <div class="full-menu-item" onclick="navigate('settings'); toggleMenu()">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:0.5">
@@ -1105,7 +1118,7 @@
     for (let i = 0; i < 12; i++) {
       const geometry = geometries[Math.floor(Math.random() * geometries.length)];
       const material = new THREE.MeshBasicMaterial({ 
-        color: [0x2563eb, 0xdc2626, 0x16a34a, 0xfbbf24][Math.floor(Math.random() * 4)],
+        color: [0x00d4ff, 0xff0066, 0x00ff88, 0xffea00][Math.floor(Math.random() * 4)],
         wireframe: true,
         transparent: true,
         opacity: 0.2
@@ -1208,6 +1221,7 @@
       if (path.startsWith('/reports/')) return { view: 'report', param: path.split('/')[2] };
       if (path.startsWith('/channel/')) return { view: 'channel', param: path.split('/')[2] };
       if (path === '/settings') return { view: 'settings', param: null };
+      if (path === '/all') return { view: 'all', param: null };
       return { view: 'home', param: null };
     }
     
@@ -1397,6 +1411,41 @@
       window.scrollTo(0, 0);
     }
     
+    // Render all reports
+    async function renderAll() {
+      const [reports, channelList] = await Promise.all([
+        api('/feed?limit=100'),
+        channels.length ? Promise.resolve(channels) : api('/channels')
+      ]);
+      if (!channels.length) channels = channelList;
+      
+      document.getElementById('app').innerHTML = `
+        <div class="channel-view">
+          <div class="channel-header">
+            <h1 class="channel-title" style="background: linear-gradient(90deg, var(--know-color), var(--watch-color), var(--listen-color)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">All Reports</h1>
+            <p class="channel-desc">Everything in one place</p>
+          </div>
+          <div class="feed-list">
+            ${reports.map(r => {
+              const img = r.image_data || r.image_url;
+              return `
+                <div class="feed-item" onclick="navigate('report', '${r.id}')">
+                  ${img ? `<img class="feed-item-image" src="${img}" alt="">` : ''}
+                  <div class="feed-item-content">
+                    <div class="feed-item-channel" style="color: ${r.channel_color}">${r.channel_name}</div>
+                    <h3 class="feed-item-title">${r.title}</h3>
+                    ${r.subtitle ? `<p class="feed-item-subtitle">${r.subtitle}</p>` : ''}
+                    <div class="feed-item-meta">${formatDate(r.created_at)} · ${r.read_time_min || 5} min</div>
+                  </div>
+                </div>
+              `;
+            }).join('') || '<p style="opacity:0.5">No reports yet</p>'}
+          </div>
+        </div>
+      `;
+      window.scrollTo(0, 0);
+    }
+    
     // Render settings
     async function renderSettings() {
       const [channelList, topics, filters] = await Promise.all([
@@ -1536,6 +1585,7 @@
       if (view === 'report') renderReport(param);
       else if (view === 'channel') renderChannel(param);
       else if (view === 'settings') renderSettings();
+      else if (view === 'all') renderAll();
       else renderHome();
     }
     
