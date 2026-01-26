@@ -83,6 +83,39 @@
     
     .nav-links a:hover, .nav-links a.active { opacity: 1; }
     
+    /* Channel pills */
+    .channel-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 48px;
+    }
+    
+    .channel-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 20px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 100px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .channel-pill:hover {
+      background: rgba(255,255,255,0.15);
+      transform: translateY(-2px);
+    }
+    
+    .channel-pill .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    
     /* Main content */
     #app {
       position: relative;
@@ -166,6 +199,25 @@
       line-height: 1;
       letter-spacing: -2px;
     }
+    
+    .section-header-row {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 24px;
+    }
+    
+    .section-see-all {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      opacity: 0.5;
+      cursor: pointer;
+      padding-bottom: 12px;
+      transition: opacity 0.3s;
+    }
+    
+    .section-see-all:hover { opacity: 1; }
     
     .section-know { background: linear-gradient(160deg, #1e3a8a 0%, #1e40af 50%, #2563eb 100%); }
     .section-watch { background: linear-gradient(160deg, #7f1d1d 0%, #991b1b 50%, #dc2626 100%); }
@@ -671,13 +723,16 @@
     }
     
     // Render section
-    function renderSection(id, label, title, items, cls) {
+    function renderSection(id, label, title, items, cls, channelSlug = null) {
       if (!items?.length) return '';
       return `
         <section id="${id}" class="section ${cls}">
           <div class="section-header">
             <div class="section-label">${label}</div>
-            <h2 class="section-title">${title}</h2>
+            <div class="section-header-row">
+              <h2 class="section-title">${title}</h2>
+              ${channelSlug ? `<span class="section-see-all" onclick="navigate('channel', '${channelSlug}')">See all →</span>` : ''}
+            </div>
           </div>
           <div class="card-grid">
             ${items.map((item, i) => renderCard(item, i === 0)).join('')}
@@ -695,12 +750,20 @@
         `<a onclick="navigate('channel', '${c.slug}')">${c.name}</a>`
       ).join('');
       
+      const channelPills = channels.map(c => 
+        `<div class="channel-pill" onclick="navigate('channel', '${c.slug}')">
+          <span class="dot" style="background:${c.color}"></span>
+          ${c.name}
+        </div>`
+      ).join('');
+      
       document.getElementById('app').innerHTML = `
         <section class="hero">
           <h1 class="hero-title">
             Your<br><span class="outline">Briefing</span>
           </h1>
           <p class="hero-subtitle">AI-curated news across tech, business, music, and culture.</p>
+          <div class="channel-pills">${channelPills}</div>
           <div class="scroll-hint">Scroll to explore</div>
         </section>
         ${renderSection('know', 'Stay Informed', 'Know', dashboard.know, 'section-know')}
