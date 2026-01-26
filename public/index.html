@@ -67,33 +67,34 @@
       cursor: pointer;
     }
     
-    .nav-links {
-      display: flex;
-      gap: 32px;
-    }
+    .nav-links { display: none; }
     
-    .nav-links a {
+    /* Menu button - always visible */
+    .menu-btn {
+      background: none;
+      border: 1px solid rgba(255,255,255,0.2);
+      color: var(--white);
+      padding: 10px 20px;
+      border-radius: 100px;
+      cursor: pointer;
+      font-family: inherit;
       font-size: 13px;
       font-weight: 500;
       text-transform: uppercase;
-      letter-spacing: 1.5px;
-      opacity: 0.6;
-      transition: opacity 0.3s;
+      letter-spacing: 1px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: all 0.3s;
     }
     
-    .nav-links a:hover, .nav-links a.active { opacity: 1; }
-    
-    /* Mobile menu */
-    .mobile-menu-btn {
-      display: none;
-      background: none;
-      border: none;
-      color: var(--white);
-      padding: 8px;
-      cursor: pointer;
+    .menu-btn:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: rgba(255,255,255,0.4);
     }
     
-    .mobile-menu {
+    /* Full page menu */
+    .full-menu {
       display: none;
       position: fixed;
       top: 0;
@@ -102,44 +103,102 @@
       bottom: 0;
       background: var(--black);
       z-index: 200;
-      padding: 100px 24px 48px;
-      flex-direction: column;
-      gap: 8px;
+      padding: 48px;
       overflow-y: auto;
     }
     
-    .mobile-menu.open { display: flex; }
+    .full-menu.open { display: block; }
     
-    .mobile-menu-close {
-      position: absolute;
-      top: 24px;
-      right: 24px;
-      background: none;
-      border: none;
-      color: var(--white);
-      font-size: 32px;
-      cursor: pointer;
-      padding: 8px;
+    .full-menu-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 64px;
     }
     
-    .mobile-menu a {
+    .full-menu-logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 28px;
+      font-weight: 900;
+    }
+    
+    .full-menu-close {
+      background: none;
+      border: 1px solid rgba(255,255,255,0.2);
+      color: var(--white);
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 24px;
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 16px 0;
-      font-size: 20px;
-      font-weight: 500;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
+      justify-content: center;
+      transition: all 0.3s;
     }
     
-    .mobile-menu .dot {
-      width: 10px;
-      height: 10px;
+    .full-menu-close:hover {
+      background: rgba(255,255,255,0.1);
+    }
+    
+    .full-menu-section {
+      margin-bottom: 48px;
+    }
+    
+    .full-menu-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      opacity: 0.4;
+      margin-bottom: 24px;
+    }
+    
+    .full-menu-channels {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .full-menu-item {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 20px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .full-menu-item:hover {
+      padding-left: 16px;
+      border-color: rgba(255,255,255,0.2);
+    }
+    
+    .full-menu-item .dot {
+      width: 12px;
+      height: 12px;
       border-radius: 50%;
+      flex-shrink: 0;
+    }
+    
+    .full-menu-item-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 36px;
+      font-weight: 700;
+    }
+    
+    .full-menu-item-desc {
+      font-size: 14px;
+      opacity: 0.4;
+      margin-left: auto;
+      max-width: 300px;
+      text-align: right;
     }
     
     @media (max-width: 768px) {
-      .mobile-menu-btn { display: block; }
+      .full-menu { padding: 24px; }
+      .full-menu-item-name { font-size: 28px; }
+      .full-menu-item-desc { display: none; }
     }
     
     /* Channel pills */
@@ -772,20 +831,25 @@
   
   <nav>
     <div class="logo" onclick="navigate('home')">Feed</div>
-    <div class="nav-links" id="nav-links"></div>
-    <button class="mobile-menu-btn" onclick="toggleMobileMenu()">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <button class="menu-btn" onclick="toggleMenu()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <line x1="3" y1="6" x2="21" y2="6"></line>
         <line x1="3" y1="12" x2="21" y2="12"></line>
         <line x1="3" y1="18" x2="21" y2="18"></line>
       </svg>
+      Menu
     </button>
   </nav>
   
-  <div class="mobile-menu" id="mobile-menu">
-    <button class="mobile-menu-close" onclick="toggleMobileMenu()">×</button>
-    <a onclick="navigate('home'); toggleMobileMenu()">Home</a>
-    <div id="mobile-menu-channels"></div>
+  <div class="full-menu" id="full-menu">
+    <div class="full-menu-header">
+      <div class="full-menu-logo">Feed</div>
+      <button class="full-menu-close" onclick="toggleMenu()">×</button>
+    </div>
+    <div class="full-menu-section">
+      <div class="full-menu-label">Channels</div>
+      <div class="full-menu-channels" id="menu-channels"></div>
+    </div>
   </div>
   
   <main id="app">
@@ -865,9 +929,9 @@
     let channels = [];
     let currentView = 'home';
     
-    // Mobile menu
-    function toggleMobileMenu() {
-      document.getElementById('mobile-menu').classList.toggle('open');
+    // Menu toggle
+    function toggleMenu() {
+      document.getElementById('full-menu').classList.toggle('open');
     }
     
     // API
@@ -957,15 +1021,12 @@
       const [dashboard, channelList] = await Promise.all([api('/dashboard'), api('/channels')]);
       channels = channelList;
       
-      document.getElementById('nav-links').innerHTML = channels.slice(0, 5).map(c => 
-        `<a onclick="navigate('channel', '${c.slug}')">${c.name}</a>`
-      ).join('');
-      
-      document.getElementById('mobile-menu-channels').innerHTML = channels.map(c => 
-        `<a onclick="navigate('channel', '${c.slug}'); toggleMobileMenu()">
+      document.getElementById('menu-channels').innerHTML = channels.map(c => 
+        `<div class="full-menu-item" onclick="navigate('channel', '${c.slug}'); toggleMenu()">
           <span class="dot" style="background:${c.color}"></span>
-          ${c.name}
-        </a>`
+          <span class="full-menu-item-name">${c.name}</span>
+          <span class="full-menu-item-desc">${c.description || ''}</span>
+        </div>`
       ).join('');
       
       const channelPills = channels.map(c => 
