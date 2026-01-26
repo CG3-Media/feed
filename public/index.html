@@ -166,6 +166,28 @@
       to { transform: rotate(360deg); }
     }
     
+    /* Toast notification */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: var(--text-primary);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 1000;
+    }
+    
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+    
     /* Report card */
     .report-card {
       display: block;
@@ -894,12 +916,32 @@
       const refreshBtn = e.target.closest('.refresh-btn');
       if (refreshBtn) {
         refreshBtn.classList.add('loading');
+        const oldCount = document.querySelectorAll('.report-card').length;
         renderFeed().then(() => {
-          // Button gets replaced, no need to remove class
+          const newCount = document.querySelectorAll('.report-card').length;
+          if (newCount > oldCount) {
+            showToast(`${newCount - oldCount} new post${newCount - oldCount > 1 ? 's' : ''} added`);
+          } else {
+            showToast('Feed refreshed');
+          }
         });
         return;
       }
     });
+    
+    // Toast helper
+    function showToast(message) {
+      let toast = document.getElementById('toast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'toast';
+        toast.className = 'toast';
+        document.body.appendChild(toast);
+      }
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2000);
+    }
     
     // Init
     loadChannels().then(() => navigate('feed'));
