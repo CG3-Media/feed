@@ -558,7 +558,7 @@
       border-top: 1px solid rgba(255,255,255,0.1);
     }
     
-    .report-sources h4 {
+    .report-sources h4, .report-related h4 {
       font-size: 11px;
       text-transform: uppercase;
       letter-spacing: 2px;
@@ -576,6 +576,59 @@
     .report-sources a:hover {
       opacity: 1;
       color: var(--accent);
+    }
+    
+    /* Related articles */
+    .report-related {
+      margin-top: 64px;
+      padding-top: 48px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .related-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      margin-top: 24px;
+    }
+    
+    .related-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 20px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .related-card:hover {
+      background: rgba(255,255,255,0.1);
+      transform: translateY(-4px);
+    }
+    
+    .related-card-channel {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      opacity: 0.5;
+      margin-bottom: 8px;
+    }
+    
+    .related-card-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+    
+    .related-card-meta {
+      font-size: 12px;
+      opacity: 0.4;
+      margin-top: 12px;
+    }
+    
+    @media (max-width: 768px) {
+      .related-grid { grid-template-columns: 1fr; }
     }
     
     /* Channel view */
@@ -1053,13 +1106,43 @@
     
     // Render report
     async function renderReport(id) {
-      const report = await api(`/reports/${id}`);
+      const [report, allReports] = await Promise.all([
+        api(`/reports/${id}`),
+        api(`/feed?limit=50`)
+      ]);
+      
       const sectionClass = report.channel_slug === 'music' ? 'listen' : 
                           report.channel_slug === 'pop-culture' || report.channel_slug === 'anime' ? 'watch' : 'know';
       
       const content = processYouTube(marked.parse(report.content || ''));
       const img = report.image_data || report.image_url;
       const sources = report.sources || [];
+      
+      // Find related articles
+      const currentEntities = report.key_entities || [];
+      const related = allReports
+        .filter(r => r.id !== parseInt(id))
+        .map(r => {
+          let score = 0;
+          // Same channel = +2
+          if (r.channel_id === report.channel_id) score += 2;
+          // Shared entities = +1 each
+          const rEntities = r.key_entities || [];
+          currentEntities.forEach(e => {
+            if (rEntities.some(re => re.toLowerCase() === e.toLowerCase())) score += 1;
+          });
+          return { ...r, score };
+        })
+        .filter(r => r.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 4);
+      
+      // More from this channel
+      const moreFromChannel = allReports
+        .filter(r => r.id !== parseInt(id) && r.channel_id === report.channel_id)
+        .slice(0, 4);
+      
+      const relatedToShow = related.length >= 2 ? related : moreFromChannel;
       
       document.getElementById('app').innerHTML = `
         <article class="report-view">
@@ -1079,6 +1162,20 @@
             <div class="report-sources">
               <h4>Sources</h4>
               ${sources.map(s => `<a href="${s.url}" target="_blank">${s.title || s.url}</a>`).join('')}
+            </div>
+          ` : ''}
+          ${relatedToShow.length ? `
+            <div class="report-related">
+              <h4>More to Explore</h4>
+              <div class="related-grid">
+                ${relatedToShow.map(r => `
+                  <div class="related-card" onclick="navigate('report', '${r.id}')">
+                    <div class="related-card-channel" style="color: ${r.channel_color}">${r.channel_name}</div>
+                    <div class="related-card-title">${r.title}</div>
+                    <div class="related-card-meta">${formatDate(r.created_at)}</div>
+                  </div>
+                `).join('')}
+              </div>
             </div>
           ` : ''}
         </article>
