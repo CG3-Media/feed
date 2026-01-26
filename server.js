@@ -381,12 +381,15 @@ app.get('/api/dashboard', async (req, res) => {
 
 **KNOW** - News and information. Business, tech, local news, policy, politics, announcements, industry updates. Anything that's primarily informational goes here. This includes local/California/LA news and policy updates. This is the default category.
 
-**WATCH** - Videos you can watch RIGHT NOW. Include if ANY of these are true:
+**WATCH** - Video content you can watch or should know about. Include if ANY of these are true:
   - Contains youtube.com or youtu.be link
-  - Says "trailer" + "watch" or "out now" or "dropped"
-  - New music video that's released (not upcoming)
-  - Episode/season currently airing ("now airing", "premiered", "streaming on")
-  Do NOT include: announcements about future releases, movies not yet in theaters, shows coming later.
+  - Trailer dropped (available to watch now)
+  - New music video released
+  - Movie now in theaters or just released
+  - Show/season streaming now ("now streaming on Netflix", "out now on HBO")
+  - Episode/season currently airing ("now airing", "premiered")
+  - Movie or show reviews (something you might want to watch)
+  Do NOT include: distant future announcements (6+ months out), casting news without content to watch.
 
 **LISTEN** - Music you can stream RIGHT NOW. Include if ANY of these are true:
   - Contains spotify.com, music.apple.com, or soundcloud.com link
@@ -401,6 +404,8 @@ Examples:
 - "Season 2 announced" → KNOW (future)
 - "Season 3 now airing" or "premiered yesterday" → WATCH (available)
 - "Trailer dropped" + youtube link → WATCH
+- "Now streaming on Netflix/HBO/etc" → WATCH
+- "In theaters now" or "opens this weekend" → WATCH
 - "Grammy nominations" → KNOW (news)
 - "New single streaming now" → LISTEN
 - Tech/business news → KNOW (always)
