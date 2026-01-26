@@ -140,6 +140,16 @@ async function initDB() {
     END $$;
   `);
   
+  // Add image_data column for base64 storage
+  await pool.query(`
+    DO $$ 
+    BEGIN 
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='feed_reports' AND column_name='image_data') THEN
+        ALTER TABLE feed_reports ADD COLUMN image_data TEXT;
+      END IF;
+    END $$;
+  `);
+  
   console.log('Database initialized');
 }
 
@@ -232,7 +242,8 @@ app.get('/api/feed', async (req, res) => {
   const { channel, limit = 20, offset = 0 } = req.query;
   try {
     let query = `
-      SELECT r.*, c.name as channel_name, c.slug as channel_slug, c.color as channel_color
+      SELECT r.id, r.channel_id, r.title, r.subtitle, r.image_url, r.image_data, r.read_time_min, r.created_at,
+             c.name as channel_name, c.slug as channel_slug, c.color as channel_color
       FROM feed_reports r
       LEFT JOIN feed_channels c ON r.channel_id = c.id
     `;
@@ -277,14 +288,29 @@ app.get('/api/reports/:id', async (req, res) => {
 
 // Create report (for Dexo to use)
 app.post('/api/reports', async (req, res) => {
-  const { channel_id, title, subtitle, content, image_url, sources, key_entities, read_time_min } = req.body;
+  const { channel_id, title, subtitle, content, image_url, image_data, sources, key_entities, read_time_min } = req.body;
   try {
     const result = await pool.query(
-      `INSERT INTO feed_reports (channel_id, title, subtitle, content, image_url, sources, key_entities, read_time_min) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-      [channel_id, title, subtitle, content, image_url, JSON.stringify(sources || []), JSON.stringify(key_entities || []), read_time_min || 5]
+      `INSERT INTO feed_reports (channel_id, title, subtitle, content, image_url, image_data, sources, key_entities, read_time_min) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      [channel_id, title, subtitle, content, image_url, image_data || null, JSON.stringify(sources || []), JSON.stringify(key_entities || []), read_time_min || 5]
     );
     res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Helper endpoint to fetch and convert image to base64
+app.post('/api/image-to-base64', async (req, res) => {
+  const { url } = req.body;
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Failed to fetch image');
+    const buffer = await response.arrayBuffer();
+    const base64 = Buffer.from(buffer).toString('base64');
+    const contentType = response.headers.get('content-type') || 'image/jpeg';
+    res.json({ base64: `data:${contentType};base64,${base64}` });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

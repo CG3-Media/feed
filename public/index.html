@@ -290,6 +290,24 @@
       font-style: italic;
     }
     
+    .report-body .youtube-embed {
+      position: relative;
+      width: 100%;
+      padding-bottom: 56.25%;
+      margin: 24px 0;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    
+    .report-body .youtube-embed iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    
     .report-body code {
       background: var(--bg-hover);
       padding: 2px 6px;
@@ -499,6 +517,15 @@
       return res.json();
     }
     
+    // Convert YouTube URLs to embeds
+    function processYouTubeEmbeds(html) {
+      // Match YouTube URLs (various formats)
+      const ytRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})(?:[^\s<]*)?/g;
+      return html.replace(ytRegex, (match, videoId) => {
+        return `<div class="youtube-embed"><iframe src="https://www.youtube.com/embed/${videoId}" allowfullscreen></iframe></div>`;
+      });
+    }
+    
     // Format date
     function formatDate(dateStr) {
       const date = new Date(dateStr);
@@ -575,7 +602,7 @@
                     <span>${r.read_time_min} min read</span>
                   </div>
                 </div>
-                ${r.image_url ? `<img class="report-image" src="${r.image_url}" alt="">` : ''}
+                ${(r.image_data || r.image_url) ? `<img class="report-image" src="${r.image_data || r.image_url}" alt="">` : ''}
               </div>
             </a>
           `).join('')}
@@ -602,8 +629,8 @@
           </div>
           <h1 class="report-title">${report.title}</h1>
           ${report.subtitle ? `<p class="report-subtitle">${report.subtitle}</p>` : ''}
-          ${report.image_url ? `<img class="report-image" src="${report.image_url}" alt="">` : ''}
-          <div class="report-body">${report.content_html}</div>
+          ${(report.image_data || report.image_url) ? `<img class="report-image" src="${report.image_data || report.image_url}" alt="">` : ''}
+          <div class="report-body">${processYouTubeEmbeds(report.content_html)}</div>
           ${sources.length > 0 ? `
             <div class="sources">
               <h3>Sources</h3>
