@@ -171,6 +171,18 @@ async function initDB() {
     END $$;
   `);
   
+  // Briefing cache table (single row)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS feed_briefing (
+      id INTEGER PRIMARY KEY DEFAULT 1,
+      know_ids JSONB DEFAULT '[]',
+      watch_ids JSONB DEFAULT '[]',
+      listen_ids JSONB DEFAULT '[]',
+      expires_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+  
   console.log('Database initialized');
 }
 
@@ -285,26 +297,46 @@ app.get('/api/feed', async (req, res) => {
   }
 });
 
-// Dashboard cache (1 hour TTL)
-let dashboardCache = null;
-let dashboardCacheTime = null;
-const DASHBOARD_CACHE_TTL = 60 * 60 * 1000; // 1 hour
-
-// Get dashboard briefing - AI-categorized recent content
+// Get dashboard briefing - AI-categorized recent content (DB-cached)
 app.get('/api/dashboard', async (req, res) => {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   const forceRefresh = req.query.refresh === 'true';
   
-  // Check cache
-  if (!forceRefresh && dashboardCache && dashboardCacheTime && (Date.now() - dashboardCacheTime < DASHBOARD_CACHE_TTL)) {
-    return res.json({
-      ...dashboardCache,
-      cached: true,
-      cached_at: new Date(dashboardCacheTime).toISOString()
-    });
-  }
-  
   try {
+    // Check for existing valid briefing
+    if (!forceRefresh) {
+      const cached = await pool.query(`
+        SELECT * FROM feed_briefing WHERE id = 1 AND expires_at > NOW()
+      `);
+      
+      if (cached.rows.length > 0) {
+        const briefing = cached.rows[0];
+        
+        // Fetch full report data for each section
+        const allIds = [...(briefing.know_ids || []), ...(briefing.watch_ids || []), ...(briefing.listen_ids || [])];
+        
+        if (allIds.length > 0) {
+          const reports = await pool.query(`
+            SELECT r.id, r.title, r.subtitle, r.image_url, r.image_data, r.read_time_min, r.created_at, r.favorited,
+                   c.name as channel_name, c.slug as channel_slug, c.color as channel_color
+            FROM feed_reports r
+            LEFT JOIN feed_channels c ON r.channel_id = c.id
+            WHERE r.id = ANY($1)
+          `, [allIds]);
+          
+          const reportsById = Object.fromEntries(reports.rows.map(r => [r.id, r]));
+          
+          return res.json({
+            know: (briefing.know_ids || []).map(id => reportsById[id]).filter(Boolean),
+            watch: (briefing.watch_ids || []).map(id => reportsById[id]).filter(Boolean),
+            listen: (briefing.listen_ids || []).map(id => reportsById[id]).filter(Boolean),
+            generated_at: briefing.created_at,
+            expires_at: briefing.expires_at,
+            cached: true
+          });
+        }
+      }
+    }
     // Get recent reports from last 7 days
     const result = await pool.query(`
       SELECT r.id, r.channel_id, r.title, r.subtitle, r.content, r.image_url, r.image_data, r.read_time_min, r.created_at, r.favorited,
@@ -382,18 +414,34 @@ Respond with valid JSON only (no markdown):
       .filter(Boolean)
       .map(r => ({ ...r, content: undefined })); // Don't send full content
     
+    // Save briefing to DB (1 hour expiry)
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+    await pool.query(`
+      INSERT INTO feed_briefing (id, know_ids, watch_ids, listen_ids, expires_at, created_at)
+      VALUES (1, $1, $2, $3, $4, NOW())
+      ON CONFLICT (id) DO UPDATE SET
+        know_ids = $1,
+        watch_ids = $2,
+        listen_ids = $3,
+        expires_at = $4,
+        created_at = NOW()
+    `, [
+      JSON.stringify(categories.know || []),
+      JSON.stringify(categories.watch || []),
+      JSON.stringify(categories.listen || []),
+      expiresAt
+    ]);
+    
     const dashboard = {
       know: getReportsById(categories.know || []),
       watch: getReportsById(categories.watch || []),
       listen: getReportsById(categories.listen || []),
-      generated_at: new Date().toISOString()
+      generated_at: new Date().toISOString(),
+      expires_at: expiresAt.toISOString(),
+      cached: false
     };
     
-    // Cache the results
-    dashboardCache = dashboard;
-    dashboardCacheTime = Date.now();
-    
-    res.json({ ...dashboard, cached: false });
+    res.json(dashboard);
   } catch (err) {
     console.error('Dashboard error:', err);
     res.status(500).json({ error: err.message });
