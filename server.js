@@ -263,7 +263,7 @@ app.get('/api/feed', async (req, res) => {
   const { channel, limit = 20, offset = 0 } = req.query;
   try {
     let query = `
-      SELECT r.id, r.channel_id, r.title, r.subtitle, r.image_url, r.image_data, r.read_time_min, r.created_at,
+      SELECT r.id, r.channel_id, r.title, r.subtitle, r.image_url, r.image_data, r.read_time_min, r.created_at, r.favorited,
              c.name as channel_name, c.slug as channel_slug, c.color as channel_color
       FROM feed_reports r
       LEFT JOIN feed_channels c ON r.channel_id = c.id
@@ -290,7 +290,7 @@ app.get('/api/dashboard', async (req, res) => {
   try {
     // Get recent reports from last 7 days
     const result = await pool.query(`
-      SELECT r.id, r.channel_id, r.title, r.subtitle, r.content, r.image_url, r.image_data, r.read_time_min, r.created_at,
+      SELECT r.id, r.channel_id, r.title, r.subtitle, r.content, r.image_url, r.image_data, r.read_time_min, r.created_at, r.favorited,
              c.name as channel_name, c.slug as channel_slug, c.color as channel_color
       FROM feed_reports r
       LEFT JOIN feed_channels c ON r.channel_id = c.id
