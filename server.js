@@ -285,8 +285,10 @@ app.get('/api/feed', async (req, res) => {
   }
 });
 
-// Get dashboard briefing - categorized recent content
+// Get dashboard briefing - AI-categorized recent content
 app.get('/api/dashboard', async (req, res) => {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  
   try {
     // Get recent reports from last 7 days
     const result = await pool.query(`
@@ -296,39 +298,85 @@ app.get('/api/dashboard', async (req, res) => {
       LEFT JOIN feed_channels c ON r.channel_id = c.id
       WHERE r.created_at > NOW() - INTERVAL '7 days'
       ORDER BY r.created_at DESC
-      LIMIT 50
+      LIMIT 30
     `);
     
     const reports = result.rows;
     
-    // Categorize reports
-    const knowChannels = ['business', 'tech', 'science'];
-    const listenChannels = ['music'];
+    if (reports.length === 0 || !apiKey) {
+      // Fallback if no reports or no API key
+      return res.json({
+        know: [],
+        watch: [],
+        listen: [],
+        generated_at: new Date().toISOString()
+      });
+    }
     
-    // Helper to check content for media types - must have ACTUAL links
-    const hasVideo = (content) => content && (
-      content.includes('youtube.com/watch') || 
-      content.includes('youtu.be/') || 
-      content.includes('youtube.com/embed')
-    );
-    const hasAudio = (content) => content && (
-      content.includes('spotify.com/') || 
-      content.includes('music.apple.com/') ||
-      content.includes('soundcloud.com/')
-    );
+    // Format reports for Claude
+    const reportsForAnalysis = reports.map(r => ({
+      id: r.id,
+      title: r.title,
+      subtitle: r.subtitle,
+      channel: r.channel_name,
+      content_preview: r.content?.substring(0, 300)
+    }));
     
-    // Watch = only items with actual YouTube/video links
-    // Listen = music channel items with actual streaming links, or any item with audio links
-    // Know = business, tech, science (general news)
+    // Ask Claude to categorize
+    const anthropic = new Anthropic({ apiKey });
+    
+    const message = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1500,
+      messages: [{
+        role: 'user',
+        content: `Categorize these news items into three sections for a personal briefing dashboard:
+
+**KNOW** - News and information to be informed about. Things happening in the world, business updates, tech news, announcements. NOT primarily media to consume.
+
+**WATCH** - Content where the PRIMARY purpose is watching video. Movie trailers, video essays, YouTube videos, visual content. The item should be ABOUT something to watch, not just news that happens to mention a video.
+
+**LISTEN** - New music to listen to. Album releases, singles, songs, playlists. The item should be ABOUT new music to hear, not just news about an artist.
+
+Items:
+${JSON.stringify(reportsForAnalysis, null, 2)}
+
+Pick the 5 best items for each category. An item can only be in ONE category. Choose the most fitting category based on what the content is primarily about.
+
+Respond with valid JSON only (no markdown):
+{
+  "know": [id1, id2, ...],
+  "watch": [id1, id2, ...],
+  "listen": [id1, id2, ...]
+}`
+      }]
+    });
+    
+    // Parse response
+    let categories;
+    try {
+      categories = JSON.parse(message.content[0].text);
+    } catch (e) {
+      // Fallback to empty if parse fails
+      categories = { know: [], watch: [], listen: [] };
+    }
+    
+    // Build response with full report data
+    const getReportsById = (ids) => ids
+      .map(id => reports.find(r => r.id === id))
+      .filter(Boolean)
+      .map(r => ({ ...r, content: undefined })); // Don't send full content
+    
     const dashboard = {
-      know: reports.filter(r => knowChannels.includes(r.channel_slug) && !hasVideo(r.content)).slice(0, 5),
-      watch: reports.filter(r => hasVideo(r.content)).slice(0, 5),
-      listen: reports.filter(r => hasAudio(r.content) || (listenChannels.includes(r.channel_slug) && hasAudio(r.content))).slice(0, 5),
+      know: getReportsById(categories.know || []),
+      watch: getReportsById(categories.watch || []),
+      listen: getReportsById(categories.listen || []),
       generated_at: new Date().toISOString()
     };
     
     res.json(dashboard);
   } catch (err) {
+    console.error('Dashboard error:', err);
     res.status(500).json({ error: err.message });
   }
 });
