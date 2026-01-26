@@ -107,7 +107,7 @@
     .main {
       flex: 1;
       margin-left: 240px;
-      max-width: 728px;
+      max-width: 900px;
       padding: 40px 24px;
     }
     
@@ -188,7 +188,151 @@
       opacity: 1;
     }
     
-    /* Dashboard sections */
+    /* Bento Dashboard */
+    .bento-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    
+    .bento-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      text-decoration: none;
+      color: inherit;
+    }
+    
+    .bento-card:hover {
+      border-color: var(--text-muted);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+    }
+    
+    /* Bento sizes */
+    .bento-card.large {
+      grid-column: span 2;
+      grid-row: span 2;
+      padding: 28px;
+    }
+    
+    .bento-card.wide {
+      grid-column: span 2;
+    }
+    
+    .bento-card.tall {
+      grid-row: span 2;
+    }
+    
+    /* Section headers in bento */
+    .bento-section-header {
+      grid-column: span 4;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+    }
+    
+    .bento-section-header h2 {
+      font-family: 'Source Serif 4', Georgia, serif;
+      font-size: 20px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .bento-section-header svg {
+      opacity: 0.5;
+    }
+    
+    /* Card content */
+    .bento-card .card-channel {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    
+    .bento-card .card-title {
+      font-family: 'Source Serif 4', Georgia, serif;
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 1.35;
+      flex-grow: 1;
+    }
+    
+    .bento-card.large .card-title {
+      font-size: 24px;
+    }
+    
+    .bento-card .card-meta {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 12px;
+    }
+    
+    .bento-card .card-subtitle {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-top: 8px;
+      line-height: 1.4;
+    }
+    
+    .bento-card.large .card-subtitle {
+      font-size: 16px;
+    }
+    
+    /* Card with image */
+    .bento-card.has-image {
+      padding: 0;
+      overflow: hidden;
+    }
+    
+    .bento-card .card-image {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+    }
+    
+    .bento-card.large .card-image {
+      height: 180px;
+    }
+    
+    .bento-card.has-image .card-content {
+      padding: 16px;
+    }
+    
+    .bento-card.large.has-image .card-content {
+      padding: 20px;
+    }
+    
+    /* Section colors */
+    .bento-card.know { border-left: 3px solid #3b82f6; }
+    .bento-card.watch { border-left: 3px solid #ef4444; }
+    .bento-card.listen { border-left: 3px solid #22c55e; }
+    
+    /* Responsive */
+    @media (max-width: 1100px) {
+      .bento-grid { grid-template-columns: repeat(2, 1fr); }
+      .bento-section-header { grid-column: span 2; }
+      .bento-card.large { grid-column: span 2; }
+    }
+    
+    @media (max-width: 600px) {
+      .bento-grid { grid-template-columns: 1fr; }
+      .bento-section-header { grid-column: span 1; }
+      .bento-card.large, .bento-card.wide { grid-column: span 1; }
+    }
+    
+    /* Legacy dashboard styles (keeping for channel views) */
     .dashboard-section {
       margin-bottom: 48px;
     }
@@ -712,7 +856,26 @@
       `).join('');
     }
     
-    // Render dashboard card
+    // Render bento card
+    function renderBentoCard(r, section, size = '') {
+      const hasImage = r.image_data || r.image_url;
+      const sizeClass = size ? ` ${size}` : '';
+      const imageClass = hasImage ? ' has-image' : '';
+      
+      return `
+        <div class="bento-card ${section}${sizeClass}${imageClass}" data-report-id="${r.id}">
+          ${hasImage ? `<img class="card-image" src="${r.image_data || r.image_url}" alt="">` : ''}
+          <div class="${hasImage ? 'card-content' : ''}">
+            <div class="card-channel" style="color: ${r.channel_color}">${r.channel_name}</div>
+            <div class="card-title">${r.title}</div>
+            ${r.subtitle && size === 'large' ? `<div class="card-subtitle">${r.subtitle}</div>` : ''}
+            <div class="card-meta">${formatDate(r.created_at)}</div>
+          </div>
+        </div>
+      `;
+    }
+    
+    // Render dashboard card (legacy, for channel views)
     function renderDashboardCard(r) {
       return `
         <div class="dashboard-card" data-report-id="${r.id}">
@@ -723,12 +886,12 @@
       `;
     }
     
-    // Render dashboard (home view)
+    // Render dashboard (home view) - Bento style
     async function renderDashboard(forceRefresh = false) {
       const main = document.getElementById('main-content');
       const dashboard = await api(`/dashboard${forceRefresh ? '?refresh=true' : ''}`);
       
-      const cacheInfo = dashboard.cached ? `Cached ${formatDate(dashboard.cached_at)}` : 'Just updated';
+      const cacheInfo = dashboard.cached ? `Updated ${formatDate(dashboard.cached_at || dashboard.generated_at)}` : 'Just updated';
       
       const refreshBtn = `
         <button class="refresh-btn" id="refresh-btn" data-dashboard-refresh="true">
@@ -742,9 +905,42 @@
         <span style="font-size: 12px; color: var(--text-muted); margin-left: 8px;">${cacheInfo}</span>
       `;
       
-      const knowIcon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
-      const watchIcon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>';
-      const listenIcon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>';
+      const knowIcon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
+      const watchIcon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>';
+      const listenIcon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>';
+      
+      // Build bento grid with mixed sizes
+      let bentoHTML = '';
+      
+      // KNOW section
+      if (dashboard.know.length > 0) {
+        bentoHTML += `<div class="bento-section-header"><h2>${knowIcon} Know</h2></div>`;
+        dashboard.know.forEach((r, i) => {
+          // First item large, rest normal or wide
+          const size = i === 0 ? 'large' : (i === 1 ? 'wide' : '');
+          bentoHTML += renderBentoCard(r, 'know', size);
+        });
+      }
+      
+      // WATCH section
+      if (dashboard.watch.length > 0) {
+        bentoHTML += `<div class="bento-section-header"><h2>${watchIcon} Watch</h2></div>`;
+        dashboard.watch.forEach((r, i) => {
+          const size = i === 0 ? 'wide' : '';
+          bentoHTML += renderBentoCard(r, 'watch', size);
+        });
+      }
+      
+      // LISTEN section  
+      if (dashboard.listen.length > 0) {
+        bentoHTML += `<div class="bento-section-header"><h2>${listenIcon} Listen</h2></div>`;
+        dashboard.listen.forEach((r, i) => {
+          const size = i === 0 ? 'wide' : '';
+          bentoHTML += renderBentoCard(r, 'listen', size);
+        });
+      }
+      
+      const isEmpty = dashboard.know.length === 0 && dashboard.watch.length === 0 && dashboard.listen.length === 0;
       
       main.innerHTML = `
         <div class="feed-header">
@@ -755,39 +951,16 @@
           <p>What you need to know, watch, and listen to</p>
         </div>
         
-        ${dashboard.know.length > 0 ? `
-          <section class="dashboard-section">
-            <h2>${knowIcon} What to Know</h2>
-            <div class="dashboard-grid">
-              ${dashboard.know.map(renderDashboardCard).join('')}
-            </div>
-          </section>
-        ` : ''}
-        
-        ${dashboard.watch.length > 0 ? `
-          <section class="dashboard-section">
-            <h2>${watchIcon} What to Watch</h2>
-            <div class="dashboard-grid">
-              ${dashboard.watch.map(renderDashboardCard).join('')}
-            </div>
-          </section>
-        ` : ''}
-        
-        ${dashboard.listen.length > 0 ? `
-          <section class="dashboard-section">
-            <h2>${listenIcon} What to Listen To</h2>
-            <div class="dashboard-grid">
-              ${dashboard.listen.map(renderDashboardCard).join('')}
-            </div>
-          </section>
-        ` : ''}
-        
-        ${dashboard.know.length === 0 && dashboard.watch.length === 0 && dashboard.listen.length === 0 ? `
+        ${isEmpty ? `
           <div class="empty-state">
             <h2>No recent content</h2>
             <p>Check back later or browse channels</p>
           </div>
-        ` : ''}
+        ` : `
+          <div class="bento-grid">
+            ${bentoHTML}
+          </div>
+        `}
       `;
     }
     
