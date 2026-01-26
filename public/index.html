@@ -188,6 +188,64 @@
       opacity: 1;
     }
     
+    /* Dashboard sections */
+    .dashboard-section {
+      margin-bottom: 48px;
+    }
+    
+    .dashboard-section h2 {
+      font-family: 'Source Serif 4', Georgia, serif;
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .dashboard-section h2 svg {
+      opacity: 0.6;
+    }
+    
+    .dashboard-grid {
+      display: grid;
+      gap: 16px;
+    }
+    
+    .dashboard-card {
+      display: block;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      text-decoration: none;
+      color: inherit;
+      transition: all 0.15s;
+    }
+    
+    .dashboard-card:hover {
+      border-color: var(--text-muted);
+      background: var(--bg-hover);
+    }
+    
+    .dashboard-card .card-channel {
+      font-size: 12px;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+    
+    .dashboard-card .card-title {
+      font-family: 'Source Serif 4', Georgia, serif;
+      font-size: 16px;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+    
+    .dashboard-card .card-meta {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 8px;
+    }
+    
     /* Report card */
     .report-card {
       display: block;
@@ -618,10 +676,92 @@
       `).join('');
     }
     
+    // Render dashboard card
+    function renderDashboardCard(r) {
+      return `
+        <a class="dashboard-card" data-report-id="${r.id}">
+          <div class="card-channel" style="color: ${r.channel_color}">${r.channel_name}</div>
+          <div class="card-title">${r.title}</div>
+          <div class="card-meta">${formatDate(r.created_at)} · ${r.read_time_min || 3} min</div>
+        </a>
+      `;
+    }
+    
+    // Render dashboard (home view)
+    async function renderDashboard() {
+      const main = document.getElementById('main-content');
+      const dashboard = await api('/dashboard');
+      
+      const refreshBtn = `
+        <button class="refresh-btn" id="refresh-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+          Refresh
+        </button>
+      `;
+      
+      const knowIcon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
+      const watchIcon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>';
+      const listenIcon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>';
+      
+      main.innerHTML = `
+        <div class="feed-header">
+          <div class="feed-header-row">
+            <h1>Your Briefing</h1>
+            ${refreshBtn}
+          </div>
+          <p>What you need to know, watch, and listen to</p>
+        </div>
+        
+        ${dashboard.know.length > 0 ? `
+          <section class="dashboard-section">
+            <h2>${knowIcon} What to Know</h2>
+            <div class="dashboard-grid">
+              ${dashboard.know.map(renderDashboardCard).join('')}
+            </div>
+          </section>
+        ` : ''}
+        
+        ${dashboard.watch.length > 0 ? `
+          <section class="dashboard-section">
+            <h2>${watchIcon} What to Watch</h2>
+            <div class="dashboard-grid">
+              ${dashboard.watch.map(renderDashboardCard).join('')}
+            </div>
+          </section>
+        ` : ''}
+        
+        ${dashboard.listen.length > 0 ? `
+          <section class="dashboard-section">
+            <h2>${listenIcon} What to Listen To</h2>
+            <div class="dashboard-grid">
+              ${dashboard.listen.map(renderDashboardCard).join('')}
+            </div>
+          </section>
+        ` : ''}
+        
+        ${dashboard.know.length === 0 && dashboard.watch.length === 0 && dashboard.listen.length === 0 ? `
+          <div class="empty-state">
+            <h2>No recent content</h2>
+            <p>Check back later or browse channels</p>
+          </div>
+        ` : ''}
+      `;
+    }
+    
     // Render feed view
     async function renderFeed() {
       const main = document.getElementById('main-content');
-      const reports = await api(`/feed${currentChannel ? `?channel=${currentChannel}` : ''}`);
+      
+      // If home view (no channel), show dashboard
+      if (!currentChannel) {
+        return renderDashboard();
+      }
+      
+      const reports = await api(`/feed?channel=${currentChannel}`);
       
       const channel = channels.find(c => c.slug === currentChannel);
       const title = channel ? channel.name : 'Your Feed';

@@ -264,6 +264,44 @@ app.get('/api/feed', async (req, res) => {
   }
 });
 
+// Get dashboard briefing - categorized recent content
+app.get('/api/dashboard', async (req, res) => {
+  try {
+    // Get recent reports from last 7 days
+    const result = await pool.query(`
+      SELECT r.id, r.channel_id, r.title, r.subtitle, r.content, r.image_url, r.image_data, r.read_time_min, r.created_at,
+             c.name as channel_name, c.slug as channel_slug, c.color as channel_color
+      FROM feed_reports r
+      LEFT JOIN feed_channels c ON r.channel_id = c.id
+      WHERE r.created_at > NOW() - INTERVAL '7 days'
+      ORDER BY r.created_at DESC
+      LIMIT 50
+    `);
+    
+    const reports = result.rows;
+    
+    // Categorize reports
+    const knowChannels = ['business', 'tech', 'science'];
+    const watchChannels = ['entertainment', 'pop-culture', 'anime'];
+    const listenChannels = ['music'];
+    
+    // Helper to check content for media types
+    const hasVideo = (content) => content && (content.includes('youtube.com') || content.includes('youtu.be') || content.includes('trailer') || content.includes('watch'));
+    const hasAudio = (content) => content && (content.includes('spotify.com') || content.includes('apple.com/music') || content.includes('album') || content.includes('single') || content.includes('track'));
+    
+    const dashboard = {
+      know: reports.filter(r => knowChannels.includes(r.channel_slug)).slice(0, 5),
+      watch: reports.filter(r => watchChannels.includes(r.channel_slug) || hasVideo(r.content)).slice(0, 5),
+      listen: reports.filter(r => listenChannels.includes(r.channel_slug) || hasAudio(r.content)).slice(0, 5),
+      generated_at: new Date().toISOString()
+    };
+    
+    res.json(dashboard);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Get single report
 app.get('/api/reports/:id', async (req, res) => {
   try {
