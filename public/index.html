@@ -631,6 +631,171 @@
       .related-grid { grid-template-columns: 1fr; }
     }
     
+    /* Settings view */
+    .settings-view {
+      padding: 140px 48px 80px;
+      max-width: 900px;
+    }
+    
+    .settings-header {
+      margin-bottom: 64px;
+    }
+    
+    .settings-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(40px, 6vw, 72px);
+      font-weight: 900;
+      letter-spacing: -2px;
+      margin-bottom: 16px;
+    }
+    
+    .settings-subtitle {
+      font-size: 18px;
+      opacity: 0.5;
+    }
+    
+    .settings-section {
+      margin-bottom: 64px;
+    }
+    
+    .settings-section-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .settings-form {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    
+    .settings-form input, .settings-form select {
+      padding: 14px 18px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 12px;
+      color: var(--white);
+      font-family: inherit;
+      font-size: 15px;
+      flex: 1;
+      min-width: 150px;
+    }
+    
+    .settings-form input::placeholder {
+      color: rgba(255,255,255,0.3);
+    }
+    
+    .settings-form input:focus, .settings-form select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    
+    .settings-form select {
+      cursor: pointer;
+    }
+    
+    .settings-form select option {
+      background: var(--black);
+    }
+    
+    .settings-form button {
+      padding: 14px 28px;
+      background: var(--white);
+      color: var(--black);
+      border: none;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .settings-form button:hover {
+      background: var(--accent);
+    }
+    
+    .settings-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .settings-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      transition: all 0.3s;
+    }
+    
+    .settings-item:hover {
+      background: rgba(255,255,255,0.06);
+    }
+    
+    .settings-item-info {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex: 1;
+    }
+    
+    .settings-item-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    
+    .settings-item-name {
+      font-weight: 500;
+    }
+    
+    .settings-item-meta {
+      font-size: 13px;
+      opacity: 0.4;
+      margin-left: auto;
+      margin-right: 16px;
+    }
+    
+    .settings-item-badge {
+      font-size: 11px;
+      padding: 4px 10px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 100px;
+      margin-left: 12px;
+    }
+    
+    .settings-item-delete {
+      background: none;
+      border: none;
+      color: rgba(255,255,255,0.3);
+      font-size: 20px;
+      cursor: pointer;
+      padding: 4px 8px;
+      transition: color 0.3s;
+    }
+    
+    .settings-item-delete:hover {
+      color: #ef4444;
+    }
+    
+    @media (max-width: 768px) {
+      .settings-view { padding: 100px 20px 60px; }
+      .settings-form { flex-direction: column; }
+      .settings-form input, .settings-form select { min-width: 100%; }
+      .settings-item { flex-wrap: wrap; gap: 12px; }
+      .settings-item-meta { margin-left: 26px; margin-right: 0; width: 100%; order: 3; }
+    }
+    
     /* Channel view */
     .channel-view {
       padding: 140px 48px 80px;
@@ -903,6 +1068,17 @@
       <div class="full-menu-label">Channels</div>
       <div class="full-menu-channels" id="menu-channels"></div>
     </div>
+    <div class="full-menu-section">
+      <div class="full-menu-label">Manage</div>
+      <div class="full-menu-item" onclick="navigate('settings'); toggleMenu()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:0.5">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        <span class="full-menu-item-name">Settings</span>
+        <span class="full-menu-item-desc">Manage channels, topics & filters</span>
+      </div>
+    </div>
   </div>
   
   <main id="app">
@@ -1031,6 +1207,7 @@
       const path = window.location.pathname;
       if (path.startsWith('/reports/')) return { view: 'report', param: path.split('/')[2] };
       if (path.startsWith('/channel/')) return { view: 'channel', param: path.split('/')[2] };
+      if (path === '/settings') return { view: 'settings', param: null };
       return { view: 'home', param: null };
     }
     
@@ -1220,10 +1397,145 @@
       window.scrollTo(0, 0);
     }
     
+    // Render settings
+    async function renderSettings() {
+      const [channelList, topics, filters] = await Promise.all([
+        api('/channels'),
+        api('/topics'),
+        api('/filters')
+      ]);
+      channels = channelList;
+      
+      document.getElementById('app').innerHTML = `
+        <div class="settings-view">
+          <div class="settings-header">
+            <h1 class="settings-title">Settings</h1>
+            <p class="settings-subtitle">Manage your channels, topics, and filters</p>
+          </div>
+          
+          <div class="settings-section">
+            <h2 class="settings-section-title">Channels</h2>
+            <form class="settings-form" id="channel-form">
+              <input type="text" name="name" placeholder="Channel name" required>
+              <input type="text" name="slug" placeholder="slug" required>
+              <input type="color" name="color" value="#6366f1" style="width:60px; padding:8px;">
+              <button type="submit">Add Channel</button>
+            </form>
+            <div class="settings-list">
+              ${channelList.map(c => `
+                <div class="settings-item">
+                  <div class="settings-item-info">
+                    <span class="settings-item-dot" style="background:${c.color}"></span>
+                    <span class="settings-item-name">${c.name}</span>
+                  </div>
+                  <button class="settings-item-delete" onclick="deleteItem('channels', ${c.id})">×</button>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+          
+          <div class="settings-section">
+            <h2 class="settings-section-title">Topics (${topics.length})</h2>
+            <form class="settings-form" id="topic-form">
+              <input type="text" name="query" placeholder="Search query" required>
+              <select name="channel_id" required>
+                <option value="">Channel</option>
+                ${channelList.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
+              </select>
+              <select name="frequency">
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+              </select>
+              <button type="submit">Add Topic</button>
+            </form>
+            <div class="settings-list">
+              ${topics.slice(0, 50).map(t => `
+                <div class="settings-item">
+                  <div class="settings-item-info">
+                    <span class="settings-item-name">${t.query}</span>
+                    <span class="settings-item-badge">${t.channel_name || 'No channel'}</span>
+                    <span class="settings-item-badge">${t.frequency}</span>
+                  </div>
+                  <button class="settings-item-delete" onclick="deleteItem('topics', ${t.id})">×</button>
+                </div>
+              `).join('')}
+              ${topics.length > 50 ? `<p style="opacity:0.4; padding:16px;">+ ${topics.length - 50} more topics</p>` : ''}
+            </div>
+          </div>
+          
+          <div class="settings-section">
+            <h2 class="settings-section-title">Filters (${filters.length})</h2>
+            <form class="settings-form" id="filter-form">
+              <input type="text" name="term" placeholder="Term to block" required>
+              <select name="channel_id">
+                <option value="">All channels</option>
+                ${channelList.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
+              </select>
+              <button type="submit">Add Filter</button>
+            </form>
+            <div class="settings-list">
+              ${filters.map(f => `
+                <div class="settings-item">
+                  <div class="settings-item-info">
+                    <span class="settings-item-name">${f.term}</span>
+                    <span class="settings-item-badge">${f.channel_name || 'Global'}</span>
+                  </div>
+                  <button class="settings-item-delete" onclick="deleteItem('filters', ${f.id})">×</button>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Form handlers
+      document.getElementById('channel-form').onsubmit = async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        await fetch('/api/channels', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: form.name.value, slug: form.slug.value, color: form.color.value })
+        });
+        renderSettings();
+      };
+      
+      document.getElementById('topic-form').onsubmit = async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        await fetch('/api/topics', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: form.query.value, channel_id: parseInt(form.channel_id.value), frequency: form.frequency.value })
+        });
+        renderSettings();
+      };
+      
+      document.getElementById('filter-form').onsubmit = async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        await fetch('/api/filters', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ term: form.term.value, channel_id: form.channel_id.value ? parseInt(form.channel_id.value) : null })
+        });
+        renderSettings();
+      };
+      
+      window.scrollTo(0, 0);
+    }
+    
+    // Delete item helper
+    async function deleteItem(type, id) {
+      await fetch(`/api/${type}/${id}`, { method: 'DELETE' });
+      renderSettings();
+    }
+    
     // Main render
     function render(view, param) {
       if (view === 'report') renderReport(param);
       else if (view === 'channel') renderChannel(param);
+      else if (view === 'settings') renderSettings();
       else renderHome();
     }
     
